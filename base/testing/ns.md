@@ -1,3 +1,4 @@
+
 您的Go程序是一个用于获取并列出 Kubernetes 集群中所有 Namespace 的示例。下面是对每一行代码的详细解释：
 
 ```go
@@ -18,7 +19,7 @@ import (
 )
 ```
 这里使用了`import`关键字来导入所需的Go包。这些包包括`fmt`用于格式化输出、`os`用于访问操作系统环境变量，以及一些用于与 Kubernetes 集群交互的包，如`k8s.io/client-go/kubernetes`和`k8s.io/client-go/rest`等。这些包是您在程序中使用的依赖项。
-
+https://pkg.go.dev/k8s.io/client-go/rest#InClusterConfig
 ```go
 func main() {
 ```

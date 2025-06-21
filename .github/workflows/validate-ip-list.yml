@@ -5,6 +5,12 @@ on:
     paths:
       - 'api_list.yaml'
 
+permissions:
+  issues: write        # 允许在问题（包括 PR 评论）上写操作
+  pull-requests: write # 允许在 PR 上写操作
+  contents: read       # 允许读取仓库内容（用于 checkout）
+
+
 jobs:
   validate-ip:
     runs-on: ubuntu-latest

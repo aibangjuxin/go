@@ -90,6 +90,7 @@ Go 的约定：
 | [practice/01-local-debug.md](practice/01-local-debug.md) | **本地调试**：改一行代码 0.3s 看到效果；mock + `-now` 复现 case；Air / Delve |
 | [practice/02-config-and-deploy.md](practice/02-config-and-deploy.md) | **配置与部署**：变量放 YAML 还是 env；GKE 部署；哪些不该写死 |
 | [practice/03-go-toolchain.md](practice/03-go-toolchain.md) | **测试与调试工具链**：air / gotestsum / dlv / golangci-lint 装法与用法 |
+| [practice/air.md](practice/air.md) | **air 专题**：加载哪个配置文件；air ↔ go run ↔ make run 等价关系 |
 
 ---
 

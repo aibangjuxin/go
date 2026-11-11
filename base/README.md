@@ -38,6 +38,7 @@
 | [practice/01-local-debug.md](practice/01-local-debug.md) | **本地调试** —— 不反复编译地改代码（make run / Air / dlv / mock 复现 case） |
 | [practice/02-config-and-deploy.md](practice/02-config-and-deploy.md) | **配置与部署** —— 变量放 YAML 还是环境变量 · GKE 部署 · 哪些不该写死 |
 | [practice/03-go-toolchain.md](practice/03-go-toolchain.md) | **测试与调试工具链** —— air / gotestsum / dlv / golangci-lint 装法与用法 |
+| [practice/air.md](practice/air.md) | **air 专题** —— 加载哪个配置文件；air ↔ go run 等价关系；字段全解 |
 
 ## 快速上手
 

@@ -10,6 +10,7 @@
 | 01 | [01-local-debug.md](01-local-debug.md) | 本地调试 | 改代码后怎么最快看到效果；不反复编译；macOS 专属坑 |
 | 02 | [02-config-and-deploy.md](02-config-and-deploy.md) | 配置注入与部署 | 变量该放 YAML 还是 env；GKE 部署；哪些不该写死 |
 | 03 | [03-go-toolchain.md](03-go-toolchain.md) | 测试与调试工具链 | air / gotestsum / dlv / golangci-lint 怎么装怎么用 |
+| 04 | [air.md](air.md) | air 专题 | air 加载哪个配置文件；air ↔ go run ↔ make run 等价关系；字段全解 |
 
 ## 两条主线
 

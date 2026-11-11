@@ -40,7 +40,8 @@ tmp_dir = "tmp"
 
   delay = 100          # 防抖：编辑器一次保存可能触发多个事件
   stop_on_error = false # ★ false = 编译失败时保留旧进程，服务不挂
-                         #   true  = 编译失败就杀掉旧进程（air 默认值）
+                         #   true  = 编译失败就杀掉旧进程
+                         #   （air 真正的默认值是 false；官方示例模板里写成了 true）
                          #   详见 base/practice/01-local-debug.md 第 3 节
   send_interrupt = true # 先 SIGTERM 让程序优雅关闭，再 SIGKILL
   kill_delay = "500ms"

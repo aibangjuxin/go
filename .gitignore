@@ -1,0 +1,14 @@
+# IDE / 插件下载的调试器包（delve dlv、pycharm pydevd 等）
+# 每个几十 MB，是本机环境产物，不该进仓库
+*.zip
+
+# IDE 自动生成的超大日志/报告类 markdown
+python-*.md
+
+# 本地产物
+.DS_Store
+tmp/
+bin/
+cov.out
+cov.html
+*.test

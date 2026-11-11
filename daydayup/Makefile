@@ -21,14 +21,17 @@ DAYS := $(sort $(notdir $(wildcard d[0-9][0-9])))
 
 .DEFAULT_GOAL := help
 
-.PHONY: help list test watch cover fmt vet lint run new clean
+.PHONY: help list stats today test watch test-watch cover fmt vet lint run new clean
 
 help: ## 显示所有命令
 	@echo "daydayup —— 每天学一点 Go"
 	@echo ""
 	@echo "  make list            列出已有的天: $(DAYS)"
+	@echo "  make stats           学习进度总览（天数 / 测试数 / 代码量）"
+	@echo "  make today           跑最近一天的示例 + 它的测试"
 	@echo "  make test            跑全部测试"
-	@echo "  make watch           保存文件自动重跑测试"
+	@echo "  make watch           保存文件自动重跑测试（推荐，零配置）"
+	@echo "  make test-watch      同上，但用 air 驱动（与 cr-check 一致）"
 	@echo "  make cover           跑测试并生成覆盖率报告 cov.out"
 	@echo "  make run DAY=d01     跑某一天的示例程序"
 	@echo "  make new [主题]      生成下一天（代码+文档+索引）"
@@ -48,6 +51,26 @@ list: ## 列出已有的天
 		fi; \
 	done
 
+stats: ## 学习进度总览
+	@days=$$(ls -d d[0-9][0-9] 2>/dev/null | wc -l | tr -d ' '); \
+	tests=$$(grep -rho '^func Test[A-Za-z0-9_]*' --include='*_test.go' . 2>/dev/null | wc -l | tr -d ' '); \
+	lines=$$(cat $$(find d[0-9][0-9] -name '*.go' 2>/dev/null) 2>/dev/null | wc -l | tr -d ' '); \
+	docs=$$(ls md/[0-9][0-9]-*.md 2>/dev/null | wc -l | tr -d ' '); \
+	echo "  进度    $$days 天  /  $$docs 篇笔记"; \
+	echo "  测试    $$tests 个 Test 函数"; \
+	echo "  代码    $$lines 行 Go（含测试）"; \
+	if [ "$$days" -gt 0 ]; then \
+		echo "  平均    $$((lines / days)) 行/天"; \
+	fi
+
+today: ## 跑最近一天的示例 + 它的测试
+	@if [ -z "$(DAYS)" ]; then echo "还没有任何一天，先跑 make new <主题>"; exit 1; fi
+	@day=$(lastword $(DAYS)); \
+	echo "── 今天是 $$day ──"; \
+	$(GO) run ./$$day; \
+	echo ""; \
+	$(GO) test -count=1 ./$$day
+
 test: ## 跑全部测试
 ifeq ($(GOTESTSUM),)
 	@$(GO) test ./...
@@ -62,6 +85,10 @@ ifeq ($(GOTESTSUM),)
 else
 	@$(GOTESTSUM) --watch --format testname -- ./...
 endif
+
+test-watch: ## 保存文件自动重跑测试（air 驱动，与 cr-check 保持一致）
+	@command -v air >/dev/null 2>&1 || { echo "⚠️  没装 air（brew install air）"; exit 1; }
+	@air -c .air.test.toml
 
 cover: ## 跑测试 + 覆盖率报告
 	@$(GO) test -coverprofile=cov.out ./...

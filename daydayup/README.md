@@ -25,6 +25,7 @@
 cd /Users/lex/git/go/daydayup
 
 make list               # 看已经学了几天
+make stats              # 一屏总览：天数 / 测试数 / 代码量
 make run DAY=d01        # 跑第 1 天的示例程序
 make test               # 跑全部测试
 make watch              # 保存文件自动重跑测试 ← 写练习时开这个
@@ -35,9 +36,10 @@ make new slices         # 生成下一天（代码 + 文档 + 自动更新索引
 
 ```bash
 make list               # 1. 看看现状
-make run DAY=d01        # 2. 跑一下已有代码
-make test               # 3. 看测试长什么样
-vim md/01-go-basics.md  # 4. 读今天的笔记
+make stats              # 2. 看看总量
+make run DAY=d01        # 3. 跑一下已有代码
+make test               # 4. 看测试长什么样
+vim md/01-go-basics.md  # 5. 读今天的笔记
 ```
 
 ---
@@ -50,6 +52,7 @@ daydayup/
 ├── go.mod               ← 独立模块（module daydayup）
 ├── Makefile             ← 把常用命令固化成 make xxx
 ├── .gitignore
+├── .air.test.toml       ← 可选：用 air 驱动「保存即重跑测试」（同 cr-check）
 │
 ├── md/                  ← 📄 文档和资料
 │   ├── README.md        ←   学习地图 / 进度索引 / 接下来学什么
@@ -131,6 +134,25 @@ func TestZeroValue(t *testing.T) {
 第 4 步最容易偷懒，但**它才是让笔记变值钱的步骤**。
 半年后你翻自己的"坑表"，比翻官方文档有用得多。
 
+### 终端怎么开（两个终端的分工）
+
+| 终端 A | 终端 B |
+|---|---|
+| `make watch` —— 挂在那儿，保存代码自动重跑全量测试 | 写代码 / 写笔记（vim、编辑器随便） |
+| 看输出：绿了继续，红了立刻改 | 改完保存 → 切回终端 A 看结果 |
+
+**不需要 air。** `make watch`（`gotestsum --watch`）已经是零配置的「保存即重跑」；
+air 的核心价值在「常驻服务自动重启」，而 `daydayup` 里全是跑一次就退出的程序，用不上。
+
+如果你想和 `cr-check` 保持同一个肌肉记忆（那边用 air），可以用：
+
+```bash
+make test-watch        # 等价于 air -c .air.test.toml
+```
+
+> 坑提醒：`air` 按**内容哈希**判断变更，光 `touch` 文件不会触发重跑，得真改内容。
+> 详见 [`../base/practice/air.md`](../base/practice/air.md)。
+
 ---
 
 ## 命令速查
@@ -139,9 +161,12 @@ func TestZeroValue(t *testing.T) {
 |---|---|
 | `make help` | 看所有命令 |
 | `make list` | 列出已有的天 + 对应文档 |
+| `make stats` | 学习总览：天数 / 笔记数 / 测试数 / 代码行数 |
+| `make today` | 跑最近一天的示例程序 + 它的测试 |
 | `make run DAY=d01` | 跑某天的示例程序 |
 | `make test` | 跑全部测试（有 gotestsum 就彩色输出，没装自动退回 `go test`） |
-| `make watch` | 保存文件自动重跑测试 |
+| `make watch` | 保存文件自动重跑测试（**写练习时最常用**） |
+| `make test-watch` | 同上，但用 air 驱动（与 cr-check 一致） |
 | `make cover` | 跑测试 + 覆盖率（生成 `cov.out`） |
 | `make new slices` | 生成下一天 |
 | `make new TOPIC="slice 与 append"` | 生成下一天（主题带空格时用这个） |
@@ -211,7 +236,8 @@ Go 的强制规则：变量声明了必须用。确实不需要就 `_ = x` 丢�
 <details>
 <summary><b>Q: 我想把整个目录提交到 git</b></summary>
 
-`daydayup/` 目前还没被 git 跟踪。提交前先看一眼 `.gitignore`（已忽略 `bin/` `tmp/` `cov.out`）。
+`daydayup/` 已经被 git 跟踪了。提交前先看一眼 `.gitignore`（已忽略 `bin/` `tmp/` `cov.out`）。
+`air` 的产物落在 `tmp/`，也在忽略列表里。
 </details>
 
 ---

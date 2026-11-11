@@ -7,6 +7,8 @@
 > 且合并必须落在 **Maintenance Window（维护窗口）**内。
 > 不满足 → **PR 合不了**。
 
+
+- `gh pr create --base feature/cr-prefix-verify --head docs/cr-prefix-lab --title "CH113456 docs: ..." --body "sync docs to feature resolve only testing"`
 ---
 
 ## 0. 30 秒跑起来

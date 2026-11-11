@@ -2,7 +2,7 @@
 # CR Check 的公网入口（GitHub 会 POST 到这里）
 #
 # ★ 三层端口必须一致：
-#   Ingress backend.service.port (80) → Service targetPort (8080) → containerPort (8080)
+#   Ingress backend.service.port (80) → Service targetPort (8081) → containerPort (8081)
 #
 # ★ 域名与 TLS 证书必须与 GitHub App 里填的 Webhook URL 完全一致。
 apiVersion: networking.k8s.io/v1

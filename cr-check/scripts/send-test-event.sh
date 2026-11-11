@@ -9,12 +9,12 @@
 #   ./scripts/send-test-event.sh 1234 feature/x  # 非受管分支 → 被忽略
 #
 # 环境变量：
-#   ADDR    服务地址，默认 http://localhost:8080
+#   ADDR    服务地址，默认 http://localhost:8081
 #   SECRET webhook secret（设了就自动带签名；本地默认空 = 服务端不验签）
 
 set -euo pipefail
 
-ADDR="${ADDR:-http://localhost:8080}"
+ADDR="${ADDR:-http://localhost:8081}"
 CR_NUMBER="${1:-1234}"
 BASE_REF="${2:-release/prd}"
 SECRET="${SECRET:-}"

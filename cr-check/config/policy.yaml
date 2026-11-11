@@ -105,7 +105,7 @@ crPlatform:
 
 # ── 服务自身 ────────────────────────────────────────────────
 server:
-  addr: ":8080"
+  addr: ":8081"
   # ★ 生产必须 false —— 先 ACK 再异步判定，避免超过 GitHub 的 10 秒投递预算
   syncEval: false
   workers: 4

@@ -241,7 +241,7 @@ func (c *Config) Validate() error {
 		c.CRPlatform.TimeoutSeconds = 5
 	}
 	if c.Server.Addr == "" {
-		c.Server.Addr = ":8080"
+		c.Server.Addr = ":8081"
 	}
 	if c.Server.Workers <= 0 {
 		c.Server.Workers = 4

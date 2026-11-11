@@ -1,0 +1,29 @@
+# Air —— 每次保存自动跑测试
+# 用法：cd cr-check && air -c .air.test.toml
+#
+# 与 .air.toml 的区别：不常驻服务，改完代码自动跑一遍 go test。
+# 适合写测试时保持"红 → 绿"的反馈循环。
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # 用 sh -c 包装，因为 go test 不是一个常驻二进制
+  # ★ gotestsum v1.13 没有 --race flag，要跑竞态检测得用 --raw-command 透传：
+  #   gotestsum --raw-command -- go test -race -json ./...
+  # gotestsum 彩色输出 + 只显示用例名，比原生 go test 干净很多
+  cmd = "gotestsum --format testname --raw-command -- go test -race -json ./... > tmp/test.out 2>&1; cat tmp/test.out"
+  entrypoint = ["/bin/sh", "-c", "cat tmp/test.out"]
+
+  include_ext = ["go", "yaml", "yml", "json"]
+  exclude_dir = ["tmp", "vendor", "testdata", "deploy", "bin", ".git"]
+  delay = 200          # 测试比编译慢，防抖给大一点
+  stop_on_error = false # 测试失败不杀进程（air 只是重跑一次）
+  send_interrupt = true
+  kill_delay = "500ms"
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

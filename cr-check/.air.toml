@@ -1,0 +1,52 @@
+# Air —— Go live-reload 配置（air v1.67+ 新 schema）
+# 官方示例：https://github.com/air-verse/air/blob/master/air_example.toml
+#
+# 用法：
+#   cd cr-check && air          # 改代码 → 自动编译 → 自动重启
+#   air -d                      # 调试模式：打印详细日志
+#
+# ⚠️ v1.67 schema 变化（老教程/网上博客大多还是旧的）：
+#   1. [run] 段已被移除。运行命令由 build.entrypoint（数组）+ build.args_bin 决定。
+#   2. build.bin 已废弃 → 用 build.entrypoint。
+#      写成 build.bin 会打印 "[warning] build.bin is deprecated"，
+#      且 [run] cmd 会被忽略，程序拿不到任何命令行参数。
+#   3. entrypoint 是数组：[可执行文件, 参数1, 参数2, ...]
+#      （没有 shell 展开，$PORT 之类的变量不会生效）
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # ★ 用 go build 而不是 go run：go run 会多一层进程包装，信号传不到你的程序
+  cmd = "go build -o ./tmp/cr-check ./cmd/server"
+
+  # ★ 第一个元素是二进制，后面都是默认参数（数组，不是字符串）
+  # 端口用 8081：本机 8080 已被 rag 项目占用
+  entrypoint = [
+    "./tmp/cr-check",
+    "-config", "config/policy.yaml",
+    "-mode", "mock",
+    "-addr", ":8081",
+    "-sync-eval",
+  ]
+
+  include_ext = ["go", "yaml", "yml", "json", "tpl"]
+  # ★ tmp 必须排除，否则 air 看到自己的产物变化 → 无限重启循环
+  exclude_dir = ["tmp", "vendor", "testdata", "deploy", "bin", ".git"]
+  exclude_regex = ["_test\\.go"]
+  # ★ 保持 false（air 默认）。设成 true 会漏掉「内容改回原样」的变更：
+  #   air 按内容哈希判断，重新编辑回旧内容时会被当成「没变」而不重建。
+  exclude_unchanged = false
+
+  delay = 100          # 防抖：编辑器一次保存可能触发多个事件
+  stop_on_error = false # ★ false = 编译失败时保留旧进程，服务不挂
+                         #   true  = 编译失败就杀掉旧进程（air 默认值）
+                         #   详见 base/practice/01-local-debug.md 第 3 节
+  send_interrupt = true # 先 SIGTERM 让程序优雅关闭，再 SIGKILL
+  kill_delay = "500ms"
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true # 退出时删掉 tmp/

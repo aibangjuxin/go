@@ -12,7 +12,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags '-s -w' -o /out/cr-chec
 # ---- runtime ----
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/cr-check /cr-check
-EXPOSE 8080
+EXPOSE 8081
 USER nonroot:nonroot
 ENTRYPOINT ["/cr-check"]
-CMD ["-config", "/etc/cr-check/policy.yaml", "-mode", "real", "-addr", ":8080"]
+CMD ["-config", "/etc/cr-check/policy.yaml", "-mode", "real", "-addr", ":8081"]

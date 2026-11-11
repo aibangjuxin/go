@@ -4,3 +4,7 @@ bin/
 .env
 cr-check
 coverage.out
+
+# air
+tmp/
+.air.log

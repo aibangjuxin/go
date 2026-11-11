@@ -364,7 +364,7 @@ func indexPage(cfg *config.Config, mode string, syncEval bool) string {
 		b.WriteString("  GET  /mock/cr/{number}  ← 内置假 CR 平台（查看 mock 数据）\n")
 	}
 	b.WriteString("\n快速验证：\n")
-	b.WriteString("  curl -s -X POST http://localhost:8080/github/webhook \\\n")
+	b.WriteString("  curl -s -X POST http://localhost:8081/github/webhook \\\n")
 	b.WriteString("    -H 'X-GitHub-Event: pull_request' \\\n")
 	b.WriteString("    -H 'X-GitHub-Delivery: demo-1' \\\n")
 	b.WriteString("    -H 'Content-Type: application/json' \\\n")

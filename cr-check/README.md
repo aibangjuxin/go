@@ -16,12 +16,12 @@ cd git-apps/cr-check
 
 # 1) 起服务（mock 模式：内置假 CR 平台 + 日志型 check writer + 同步判定）
 make run
-# 或：go run ./cmd/server -config config/policy.yaml -mode mock -addr :8080 -sync-eval
- go run ./cmd/server -config config/policy.yaml -mode mock -addr :8080 -sync-eval
-{"time":"2026-11-07T19:46:48.179248+08:00","level":"INFO","msg":"启动 CR Check","mode":"mock","addr":":8080","check":"cr/prod-validation","managed_branches":["release/prd","release/prod"],"sync_eval":true,"github_configured":false,"cr_platform_configured":false}
+# 或：go run ./cmd/server -config config/policy.yaml -mode mock -addr :8081 -sync-eval
+ go run ./cmd/server -config config/policy.yaml -mode mock -addr :8081 -sync-eval
+{"time":"2026-11-07T19:46:48.179248+08:00","level":"INFO","msg":"启动 CR Check","mode":"mock","addr":":8081","check":"cr/prod-validation","managed_branches":["release/prd","release/prod"],"sync_eval":true,"github_configured":false,"cr_platform_configured":false}
 {"time":"2026-11-07T19:46:48.17983+08:00","level":"INFO","msg":"mock 模式：使用内置假 CR 平台","crs":6}
 {"time":"2026-11-07T19:46:48.180309+08:00","level":"INFO","msg":"定时重扫已启动","interval":300000000000}
-{"time":"2026-11-07T19:46:48.180412+08:00","level":"INFO","msg":"HTTP 服务已启动","addr":":8080","index":"http://localhost:8080/"}
+{"time":"2026-11-07T19:46:48.180412+08:00","level":"INFO","msg":"HTTP 服务已启动","addr":":8081","index":"http://localhost:8081/"}
 {"time":"2026-11-07T19:47:29.359812+08:00","level":"INFO","msg":"开始判定","pr":"acme/platform#42","base":"release/prd","sha":"a1b2c3d4e5f6789012345678901234567890abcdef","source":"webhook"}
 {"time":"2026-11-07T19:47:29.359876+08:00","level":"INFO","msg":"check run written","owner":"acme","repo":"platform","sha":"a1b2c3d4e5f6789012345678901234567890abcdef","name":"cr/prod-validation","status":"in_progress","conclusion":"in_progress"}
 {"time":"2026-11-07T19:47:29.359917+08:00","level":"INFO","msg":"check run written","owner":"acme","repo":"platform","sha":"a1b2c3d4e5f6789012345678901234567890abcdef","name":"cr/prod-validation","status":"completed","conclusion":"failure"}
@@ -32,8 +32,11 @@ make run
 # 2) 另开一个终端，发一个测试请求
 ./scripts/send-test-event.sh
 
+# ★ 或者用 make target（不受当前目录影响，从任何地方都能跑）
+make -C /Users/lex/git/go/cr-check probe
+
 ./scripts/send-test-event.sh
-→ POST http://localhost:8080/github/webhook  (CR=1234, base=release/prd, delivery=demo-1234-1794052049335218000)
+→ POST http://localhost:8081/github/webhook  (CR=1234, base=release/prd, delivery=demo-1234-1794052049335218000)
 
 {
   "action": "opened",
@@ -130,7 +133,7 @@ make run
 > 想看到全绿，用固定时间启动：
 >
 > ```bash
-> go run ./cmd/server -config config/policy.yaml -mode mock -addr :8080 -sync-eval \
+> go run ./cmd/server -config config/policy.yaml -mode mock -addr :8081 -sync-eval \
 >   -now "2025-01-06T03:00:00+08:00"
 > ```
 
@@ -193,12 +196,12 @@ cr-check/
 make run
 
 # B. 固定时间落在维护窗口内（推荐用于演示"全绿"）
-go run ./cmd/server -config config/policy.yaml -mode mock -addr :8080 -sync-eval \
+go run ./cmd/server -config config/policy.yaml -mode mock -addr :8081 -sync-eval \
   -now "2025-01-06T03:00:00+08:00"
 
 # C. 带 webhook secret（验证 HMAC 验签）
 WEBHOOK_SECRET=topsecret go run ./cmd/server -config config/policy.yaml -mode mock \
-  -addr :8080 -sync-eval -now "2025-01-06T03:00:00+08:00"
+  -addr :8081 -sync-eval -now "2025-01-06T03:00:00+08:00"
 ```
 
 ### 3.2 发测试请求
@@ -234,19 +237,37 @@ SECRET=topsecret ./scripts/send-test-event.sh 1234
 ```bash
 BODY=$(cat testdata/pr-event.json)
 
-curl -s -X POST http://localhost:8080/github/webhook \
+curl -s -X POST http://localhost:8081/github/webhook \
   -H 'X-GitHub-Event: pull_request' \
   -H "X-GitHub-Delivery: $(uuidgen)" \
   -H 'Content-Type: application/json' \
   --data-binary "$BODY" | jq
 ```
 
+> ★ **注意工作目录**：上面这条命令必须在 **cr-check/** 目录下执行。
+> 在仓库父目录（`git/go/`）执行会报：
+> ```
+> curl: option --data: error encountered when reading a file
+> ```
+> 因为 `testdata/` 在 `cr-check/` 下面，不在父目录。
+>
+> **推荐用 make target**（内部用 `$(CURDIR)` 拼绝对路径，与当前目录无关）：
+> ```bash
+> make -C cr-check probe        # 从任何目录执行都可以
+> ```
+>
+> 或者用绝对路径 / 脚本（脚本自己生成临时文件，也不依赖 cwd）：
+> ```bash
+> curl --data-binary "@$(pwd)/testdata/pr-event.json" ...
+> ./scripts/send-test-event.sh 1234
+> ```
+
 ### 3.4 验证幂等
 
 ```bash
 ID="dup-$(date +%s)"
 for i in 1 2; do
-  curl -s -X POST http://localhost:8080/github/webhook \
+  curl -s -X POST http://localhost:8081/github/webhook \
     -H 'X-GitHub-Event: pull_request' -H "X-GitHub-Delivery: $ID" \
     -H 'Content-Type: application/json' --data-binary "$BODY" | jq -r .status
 done
@@ -257,9 +278,9 @@ done
 ### 3.5 观察内部状态
 
 ```bash
-curl -s http://localhost:8080/internal/last-check  | jq      # 最近一次 check 写入
+curl -s http://localhost:8081/internal/last-check  | jq      # 最近一次 check 写入
 
-➜  cr-check git:(main) ✗ curl -s http://localhost:8080/internal/last-check  | jq
+➜  cr-check git:(main) ✗ curl -s http://localhost:8081/internal/last-check  | jq
 {
   "ref": {
     "Owner": "acme",
@@ -321,13 +342,13 @@ curl -s http://localhost:8080/internal/last-check  | jq      # 最近一次 chec
   "at": "2026-11-07T19:49:55.281192+08:00"
 }
 
-curl -s http://localhost:8080/internal/audit      | jq      # 审计流水
-curl -s http://localhost:8080/internal/registry   | jq      # 已登记的受管 PR
-curl -s -X POST http://localhost:8080/internal/recheck | jq  # 立即重扫
-curl -s http://localhost:8080/metrics | grep cr_check        # 指标
-curl -s http://localhost:8080/mock/cr/1234 | jq              # 看 mock CR 数据
+curl -s http://localhost:8081/internal/audit      | jq      # 审计流水
+curl -s http://localhost:8081/internal/registry   | jq      # 已登记的受管 PR
+curl -s -X POST http://localhost:8081/internal/recheck | jq  # 立即重扫
+curl -s http://localhost:8081/metrics | grep cr_check        # 指标
+curl -s http://localhost:8081/mock/cr/1234 | jq              # 看 mock CR 数据
 
-➜  cr-check git:(main) ✗ curl -s http://localhost:8080/internal/last-check  | jq
+➜  cr-check git:(main) ✗ curl -s http://localhost:8081/internal/last-check  | jq
 {
   "ref": {
     "Owner": "acme",
@@ -388,7 +409,7 @@ curl -s http://localhost:8080/mock/cr/1234 | jq              # 看 mock CR 数�
   ],
   "at": "2026-11-07T19:49:55.281192+08:00"
 }
-➜  cr-check git:(main) ✗ curl -s http://localhost:8080/mock/cr/1234 | jq
+➜  cr-check git:(main) ✗ curl -s http://localhost:8081/mock/cr/1234 | jq
 {
   "number": "1234",
   "status": "implement",

@@ -66,10 +66,30 @@ Go 的约定：
 | 5 | [05-dependency-injection.md](05-dependency-injection.md) | 依赖注入：把依赖当参数传进来，而不是内部 new | `main.go` 的"依赖组装"段 + `webhook.Handler` 的字段 |
 | 6 | [06-factory.md](06-factory.md) | 工厂：需要"运行时才知道用哪个实现"时用 | `gh.Factory`（按 installation_id 缓存 client） |
 | 7 | [07-context.md](07-context.md) | Context：跨调用传值 + 取消信号 + 超时 | `ctx` 一路穿过 handler → client → HTTP 请求 |
-| 8 | [newclient.md](newclient.md) | （已读）构造函数模式的通用介绍 | — |
+| 8 | [08-goroutine-channel.md](08-goroutine-channel.md) | Goroutine 与 Channel：并发原语、worker pool、select | `queue.Start` 的 worker 循环、`Queue.Push` 的非阻塞投递 |
+| 9 | [09-sync.md](09-sync.md) | sync 包：Mutex / RWMutex / WaitGroup / atomic、race detector | `Usage.Claim`、`Registry.List`、`LogWriter.write` |
+| 10 | [10-error.md](10-error.md) | 错误处理：error 包装、`errors.Is/As`、fail-closed | `crplatform.Client` 的 `(nil,nil)` vs `(nil,err)` 语义 |
+| 11 | [11-http.md](11-http.md) | net/http：路由、中间件、超时、优雅关闭、探针 | `mux.Handle("POST /github/webhook", handler)`、`srv.Shutdown` |
+| 12 | [12-json.md](12-json.md) | encoding/json：struct tag、omitempty、模型解耦 | `pullRequestEvent`、`platformResponse → ChangeRequest` |
+| 13 | [13-testing.md](13-testing.md) | testing：表驱动、httptest、fake、-race、可注入时间 | `rules_test.go`、`handler_test.go` 的 `newTestHandler` |
+| 14 | [14-time.md](14-time.md) | time 包：Duration、时区、维护窗口、Ticker | `rules.Window.Contains`（跨零点）、`Scheduler.Run` |
+| 15 | [15-defer-panic-recover.md](15-defer-panic-recover.md) | defer / panic / recover：资源释放与崩溃处理 | `defer resp.Body.Close()`、`os.Exit(1)` |
+| 16 | [16-slice-map-stdlib.md](16-slice-map-stdlib.md) | Slice / Map 与常用标准库 | `strings.Builder`、`strings.EqualFold`、`regexp.QuoteMeta` |
+| 17 | [17-modules-build.md](17-modules-build.md) | 依赖管理、构建与发布 | `go.mod`、Makefile、多阶段 Dockerfile、交叉编译 |
+| 18 | [18-logging-slog.md](18-logging-slog.md) | log/slog：结构化日志、级别、审计日志 | `main.go` 的 slog 初始化、`audit.Sink.Record` |
+| — | [newclient.md](newclient.md) | （已读）构造函数模式的通用介绍 | — |
 
 **建议顺序**：struct → method → interface → constructor → DI → factory → context。
-前三者是最基础的地基，interface 是 Go 的灵魂，后四个是工程惯例。
+前三者是最基础的地基，interface 是 Go 的灵魂，前七篇是工程惯例。
+08~18 是"运行时与工程化"：**并发 → 错误 → HTTP → 序列化 → 测试 → 时间 → 工具链**。
+
+### 工程实践（不在这条主线上，但每天都在用）
+
+| 文档 | 一句话 |
+|---|---|
+| [practice/01-local-debug.md](practice/01-local-debug.md) | **本地调试**：改一行代码 0.3s 看到效果；mock + `-now` 复现 case；Air / Delve |
+| [practice/02-config-and-deploy.md](practice/02-config-and-deploy.md) | **配置与部署**：变量放 YAML 还是 env；GKE 部署；哪些不该写死 |
+| [practice/03-go-toolchain.md](practice/03-go-toolchain.md) | **测试与调试工具链**：air / gotestsum / dlv / golangci-lint 装法与用法 |
 
 ---
 
@@ -78,7 +98,7 @@ Go 的约定：
 ```bash
 cd /Users/lex/git/go/cr-check
 
-make run          # = go run ./cmd/server -config config/policy.yaml -mode mock -addr :8080 -sync-eval
+make run          # = go run ./cmd/server -config config/policy.yaml -mode mock -addr :8081 -sync-eval
 make test         # go test -race -cover ./...
 make vet          # go vet ./...   官方静态检查
 make fmt          # gofmt -w .     格式化
@@ -88,7 +108,7 @@ make build        # 编译到 bin/cr-check
 curl 试一下：
 
 ```bash
-curl -s -X POST http://localhost:8080/github/webhook \
+curl -s -X POST http://localhost:8081/github/webhook \
   -H 'X-GitHub-Event: pull_request' \
   -H 'X-GitHub-Delivery: demo-1' \
   -H 'Content-Type: application/json' \
@@ -149,9 +169,13 @@ go doc <包>.<符号>    # 看文档（godoc）
 读完 07 之后，建议自己动手：
 
 1. 打开 `internal/crplatform/crplatform.go`，找出「接口定义」和「两个实现」；
-2. 打开 `cmd/server/main.go` 的第 92~190 行，看「依赖组装」是怎么把实现塞进接口的；
+2. 打开 `cmd/server/main.go`，看「依赖组装」是怎么把实现塞进接口的；
 3. 跑 `make run`，用 curl 打一发，看日志里 `ctx` 传到了哪里。
+
+读完 07~18 之后，再看 [practice/](practice/README.md)：
+那两篇讲的是**每天都要用**的东西 —— 怎么不反复编译地调代码、
+配置该放 YAML 还是环境变量、部署到 GKE 时要注意什么。
 
 ---
 
-相关文档： [newclient.md](newclient.md)（构造函数模式）
+相关文档： [newclient.md](newclient.md)（构造函数模式）· [practice/](practice/README.md)（工程实践）

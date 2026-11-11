@@ -1,0 +1,5 @@
+bin/
+tmp/
+cov.out
+cov.html
+*.test

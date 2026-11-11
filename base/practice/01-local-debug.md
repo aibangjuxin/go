@@ -65,6 +65,7 @@ make run
 make run
 
 # 终端 2：反复打请求
+- /Users/lex/git/go/cr-check at this dir 
 curl -s -X POST http://localhost:8081/github/webhook \
   -H 'X-GitHub-Event: pull_request' \
   -H 'X-GitHub-Delivery: demo-1' \

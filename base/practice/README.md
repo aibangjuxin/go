@@ -11,6 +11,8 @@
 | 02 | [02-config-and-deploy.md](02-config-and-deploy.md) | 配置注入与部署 | 变量该放 YAML 还是 env；GKE 部署；哪些不该写死 |
 | 03 | [03-go-toolchain.md](03-go-toolchain.md) | 测试与调试工具链 | air / gotestsum / dlv / golangci-lint 怎么装怎么用 |
 | 04 | [air.md](air.md) | air 专题 | air 加载哪个配置文件；air ↔ go run ↔ make run 等价关系；字段全解 |
+| 05 | [test-manual.md](test-manual.md) | CR Check 测试手册 | 每条规则怎么用 curl 复现；入口/幂等/验签/窗口边界用例；一键回归脚本 |
+| 05 | [test-manual.sh](test-manual.sh) | CR Check 自动化测试脚本 | 自建环境 + 逐条验证 + 打印接口覆盖矩阵（本文 05 的可执行版） |
 
 ## 两条主线
 
@@ -46,6 +48,7 @@ Air 自动重启 / dlv 断点 / go test -race
 | 配置 | `replicas: 2` + 内存幂等 Map = **幂等失效（bug）**；Redis 实现已写好但没接上 |
 | 部署 | `ENTRYPOINT` 必须 exec 形式，否则收不到 SIGTERM，优雅关闭失效 |
 | 多环境 | 用 Kustomize overlays，不要复制 Deployment |
+| 测试 | `test-manual.sh` 自带服务生命周期（编译/起/停/端口顺延）+ 59 条用例 + 接口覆盖矩阵，退出码可直接进 CI |
 
 ## 相关
 

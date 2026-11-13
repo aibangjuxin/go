@@ -58,12 +58,20 @@ daydayup/
 │   ├── README.md        ←   学习地图 / 进度索引 / 接下来学什么
 │   ├── 01-go-basics.md  ←   Day 1：Go 长什么样
 │   ├── 02-variables.md  ←   Day 2：变量声明 + 零值
-│   └── 03-xxx.md        ←   ……
+│   ├── 03-if-for.md     ←   Day 3：if / for（判断 + 循环）
+│   ├── 04-functions-returns.md ← Day 4：函数和返回值
+│   └── 05-xxx.md        ←   ……
 │
 ├── d01/                 ← Day 1 的代码
 │   ├── main.go          ←   可运行的示例
 │   └── main_test.go     ←   配套测试（断言今天学的技巧）
 ├── d02/
+│   ├── main.go
+│   └── main_test.go
+├── d03/
+│   ├── main.go
+│   └── main_test.go
+├── d04/
 │   ├── main.go
 │   └── main_test.go
 │
@@ -80,7 +88,7 @@ Go 里**一个目录只能有一个 `package main` 的 `func main()`**。
 main redeclared in this block
 ```
 
-所以每天独立成目录，`d01/` `d02/` 各有各的 `main()`，互不干扰：
+所以每天独立成目录，`d01/` `d02/` `d03/` 各有各的 `main()`，互不干扰：
 
 ```bash
 go run ./d01     # ✅
@@ -270,4 +278,4 @@ Go 的强制规则：变量声明了必须用。确实不需要就 `_ = x` 丢�
 
 ---
 
-*最后更新：2026-11-11*
+*最后更新：2026-11-12*

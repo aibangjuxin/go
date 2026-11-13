@@ -18,7 +18,17 @@
 |---|---|---|---|
 | 01 | [01-go-basics.md](01-go-basics.md) | Go 长什么样：package / import / func main | [`d01/`](../d01/) |
 | 02 | [02-variables.md](02-variables.md) | 变量声明的三种方式 + 零值 | [`d02/`](../d02/) |
+| 03 | [03-if-for.md](03-if-for.md) | if / for：判断 + 循环 | [`d03/`](../d03/) |
+| 04 | [04-functions-returns.md](04-functions-returns.md) | 函数和返回值：输入 → 输出 | [`d04/`](../d04/) |
 <!-- AUTO-INDEX -->
+
+## 参考文档
+
+不配练习代码的专题笔记，用 cr-check 真实项目举例：
+
+| 文档 | 主题 |
+|---|---|
+| [04-go-mod.md](04-go-mod.md) | go.mod / go.sum：依赖声明、版本语义化、间接依赖、缓存与常用命令 |
 
 ## 之后可以学的（挑着来）
 

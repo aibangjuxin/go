@@ -1,0 +1,16 @@
+# 一个 GitHub Actions workflow 的示例片段（纯 YAML）
+name: Sample Workflow
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 打个招呼
+        run: echo "hello from sample"

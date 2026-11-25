@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: broken-demo
+data:
+  key: value
+   bad_indent: "这里多缩进了一格，YAML 解析会报错"

@@ -1,0 +1,13 @@
+# 一份普通应用配置（纯 YAML，不是 K8s 清单）
+# 它会被"YAML 语法校验"看到，但不会进"示例清单结构自检"（那个只看 k8s-*.yaml）
+app:
+  name: demo-app
+  replicas: 2
+
+logging:
+  level: info
+  format: json
+
+features:
+  metrics: true
+  tracing: false

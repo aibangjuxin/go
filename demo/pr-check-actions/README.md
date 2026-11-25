@@ -228,3 +228,5 @@ on:
 ```
 
 ⚠️ 加了 `paths` 过滤 + 把它设成 required check = PR 永远 Blocked（required check 永不上报）。
+
+<!-- tmp verification -->

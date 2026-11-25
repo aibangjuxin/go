@@ -1,10 +1,33 @@
-name: Validate IP List in Pull Request
+name: Validate IP List (手动触发)
+
+# ★ 这个 workflow **不再在 PR 上自动触发** —— 所以 PR 的状态里不会再出现
+#   "validate-ip" 这条 check。
+#
+#   保留它的原因：ip_validator.py + api_list.yaml 这套校验逻辑还想留着，
+#   以后想用随时手动跑（源码、脚本、说明都在仓库里）。
+#
+#   ★ 怎么手动跑：
+#     Actions 页面 → 左侧 "Validate IP List (手动触发)" → Run workflow → 选分支 → Run
+#     也可以命令行：
+#       gh workflow run validate-ip-list.yml -f base_branch=main
+#
+#   ★ 以后想恢复"改 api_list.yaml 就自动校验、并且出现在 PR 的 Checks 里"：
+#     把下面的 on: 换成
+#         on:
+#           pull_request:
+#             branches: [ main ]
+#     但恢复之前想清楚两件事：
+#       1. 一旦恢复，它就会重新出现在**每个** PR 的 Checks 里（这是你当初想避免的）
+#       2. 如果同时把它设成 required status check，**绝不能加 paths 过滤**
+#          —— 否则"没改 api_list.yaml 的 PR"里它根本不上报，PR 会永远显示 Blocked
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - '**/api_list.yaml'  # 只匹配 api_list.yaml 文件
+  workflow_dispatch:
+    inputs:
+      base_branch:
+        description: '对比的基准分支'
+        required: false
+        default: 'main'
 
 permissions:
   issues: write        # 允许在 PR 上添加评论
@@ -23,22 +46,29 @@ jobs:
       - name: Find modified api_list.yaml files
         id: find-files
         run: |
+          # 手动触发用 inputs.base_branch；PR 触发用 github.base_ref
+          base_ref="${inputs.base_branch || github.base_ref || 'main'}}"
+          [ -n "$base_ref" ] || base_ref=main
+          git fetch --no-tags origin "$base_ref"
           # 查找 PR 中修改的 api_list.yaml 文件
-          modified_files=$(git diff --name-only origin/main...HEAD | grep 'api_list.yaml' || true)
+          modified_files=$(git diff --name-only --diff-filter=ACMR "origin/$base_ref...HEAD" | grep 'api_list.yaml' || true)
           if [ -z "$modified_files" ]; then
-            echo "No api_list.yaml files modified in this PR."
-            echo "files=" >> $GITHUB_OUTPUT
+            echo "No api_list.yaml files modified."
+            echo "files=" >> "${GITHUB_OUTPUT}"
           else
             echo "Found modified api_list.yaml files: $modified_files"
-            echo "files=$modified_files" >> $GITHUB_OUTPUT
+            echo "files=$modified_files" >> "${GITHUB_OUTPUT}"
           fi
 
+      # ↓ 没改 api_list.yaml 时，后面这些步骤全部跳过
       - name: Set up Python
+        if: steps.find-files.outputs.files != ''
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
       - name: Install dependencies
+        if: steps.find-files.outputs.files != ''
         run: |
           python -m pip install --upgrade pip
           pip install ipaddress
@@ -47,11 +77,9 @@ jobs:
         id: validate
         if: steps.find-files.outputs.files != ''
         run: |
-          # 初始化结果文件
           echo "[]" > all_results.json
           exit_code=0
-          # 对每个修改的 api_list.yaml 文件运行验证
-          for file in ${{ steps.find-files.outputs.files }}; do
+          for file in ${steps.find-files.outputs.files}}; do
             echo "Validating $file"
             if python ip_validator.py "$file" --json-output > "results-$(basename $file).json"; then
               echo "Validation succeeded for $file"
@@ -59,30 +87,26 @@ jobs:
               echo "Validation failed for $file"
               exit_code=1
             fi
-            # 合并结果到 all_results.json
             jq -s '.[0] + [.[1]]' all_results.json "results-$(basename $file).json" > temp.json
             mv temp.json all_results.json
             cat "results-$(basename $file).json"
           done
-          # 保存最终退出码
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+          echo "exit_code=$exit_code" >> "${GITHUB_OUTPUT}"
         continue-on-error: true
 
       - name: Parse validation results
         id: parse
         if: steps.find-files.outputs.files != ''
         run: |
-          # 解析所有验证结果
           comment_body="### IP Validation Results\n\n"
           all_suggestions=""
           all_status="success"
-          # 遍历 all_results.json 中的每个文件结果
           length=$(jq 'length' all_results.json)
           for i in $(seq 0 $((length-1))); do
             file=$(jq -r ".[$i].file" all_results.json)
             status=$(jq -r ".[$i].status" all_results.json)
             message=$(jq -r ".[$i].message" all_results.json)
-            suggestions=$(jq -r ".[$i].suggestions | join(\"\n- \")" all_results.json)
+            suggestions=$(jq -r ".[$i].suggestions | join(\"\\n- \\")" all_results.json)
             comment_body+="**File**: $file\n**Status**: $status\n**Message**: $message\n"
             if [ -n "$suggestions" ]; then
               comment_body+="**Suggestions**:\n- $suggestions\n\n"
@@ -94,20 +118,21 @@ jobs:
               all_status="warning"
             fi
           done
-          echo "comment_body<<EOF" >> $GITHUB_OUTPUT
-          echo "$comment_body" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "all_status=$all_status" >> $GITHUB_OUTPUT
-          echo "all_suggestions<<EOF" >> $GITHUB_OUTPUT
-          echo "$all_suggestions" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "comment_body<<EOF" >> "${GITHUB_OUTPUT}"
+          echo "$comment_body" >> "${GITHUB_OUTPUT}"
+          echo "EOF" >> "${GITHUB_OUTPUT}"
+          echo "all_status=$all_status" >> "${GITHUB_OUTPUT}"
+          echo "all_suggestions<<EOF" >> "${GITHUB_OUTPUT}"
+          echo "$all_suggestions" >> "${GITHUB_OUTPUT}"
+          echo "EOF" >> "${GITHUB_OUTPUT}"
 
       - name: Comment on PR
-        if: steps.find-files.outputs.files != '' && steps.validate.outputs.exit_code != '0'
+        # 只有 PR 触发时才有 PR 可评论（手动触发没有 PR）
+        if: github.event_name == 'pull_request' && steps.find-files.outputs.files != '' && steps.validate.outputs.exit_code != '0'
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `${{ steps.parse.outputs.comment_body }}`;
+            const comment = `${steps.parse.outputs.comment_body}`;
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -116,10 +141,10 @@ jobs:
             });
 
       - name: Set check status
-        if: steps.find-files.outputs.files != '' && steps.validate.outputs.exit_code != '0'
+        if: github.event_name == 'pull_request' && steps.find-files.outputs.files != '' && steps.validate.outputs.exit_code != '0'
         run: |
           echo "Validation failed for one or more api_list.yaml files:"
-          echo "${{ steps.parse.outputs.all_suggestions }}"
+          echo "${steps.parse.outputs.all_suggestions}"
           exit 1
 
       - name: No action needed

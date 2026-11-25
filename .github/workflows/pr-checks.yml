@@ -1,0 +1,159 @@
+# PR Checks —— 用 GitHub 自带的 Actions 模拟"PR → Check"这条链路
+#
+# 这个 workflow 存在的意义：证明 **"PR 上出现一条 Check" 这件事不需要 Cloud Build**。
+# Cloud Build 只是执行器之一（另一个执行器见 ci-simulation/ci-test.yaml），
+# 真正的门禁来自"谁把结果写回 PR"：
+#   · GitHub Actions：每个 job 结束自动变成 PR 上的一条 Check
+#   · Cloud Build：  一次 build 结束回写成 PR 上的一条 Check
+#
+# ★ 设计原则：
+#   1. 零第三方依赖 —— 全部用 runner 自带的 ruby / python3 / bash
+#   2. 增量检查 —— 只检查**本次 PR 改动的文件**，不去翻历史文件的旧账
+#      （仓库里 base/git.sh 就有真实的 bash 语法错误，全量扫描会一直红）
+#   3. Helm 模板（{{ .Values.x }}）不是合法 YAML，交给 helm lint，这里跳过
+
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一个 PR 连续 push 时，取消上一次还没跑完的检查
+concurrency:
+  group: pr-checks-${github.event.pull_request.number || github.ref}
+  cancel-in-progress: true
+
+jobs:
+  # ── Check ①：YAML 语法校验 ─────────────────────────
+  yaml-syntax:
+    name: YAML 语法校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 增量对比需要完整历史
+
+      - name: 准备"本次改动的文件"列表
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            git diff --name-only --diff-filter=ACMR "origin/${GITHUB_BASE_REF}...HEAD" \
+              | tee /tmp/changed.txt
+          else
+            git ls-files | tee /tmp/changed.txt
+          fi
+          echo "改动文件数: $(wc -l < /tmp/changed.txt)"
+
+      - name: 用 Ruby 标准库逐个解析 YAML
+        run: |
+          set -euo pipefail
+          ruby -ryaml -e '
+            changed = File.readlines("/tmp/changed.txt").map(&:strip).reject(&:empty?)
+            yaml_files = changed.select { |f| f.end_with?(".yml", ".yaml") }
+            # Helm 模板（{{ .Values.x }}）不是合法 YAML，要用 helm lint 校验，这里排除
+            templates, plain = yaml_files.partition { |f| f.include?("/templates/") }
+            bad = []
+            plain.each do |f|
+              next unless File.exist?(f)
+              begin
+                YAML.parse_file(f)      # 只解析语法，不做类型解析
+                puts "OK   #{f}"
+              rescue Psych::SyntaxError => e
+                bad << "#{f}: #{e.message}"
+              end
+            end
+            puts
+            unless templates.empty?
+              puts "跳过 Helm 模板（需 helm lint 校验）："
+              templates.each { |f| puts "  - #{f}" }
+              puts
+            end
+            if bad.empty?
+              puts "✅ #{plain.size} 个 YAML 文件语法全部正确"
+            else
+              puts "❌ YAML 语法错误："
+              bad.each { |b| puts "  - #{b}" }
+              exit 1
+            end
+          '
+
+  # ── Check ②：Shell / Python 语法校验 ───────────────
+  script-syntax:
+    name: Shell / Python 语法校验
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 准备"本次改动的文件"列表
+        run: |
+          set -euo pipefail
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then
+            git fetch --no-tags origin "${GITHUB_BASE_REF}"
+            git diff --name-only --diff-filter=ACMR "origin/${GITHUB_BASE_REF}...HEAD" > /tmp/changed.txt
+          else
+            git ls-files > /tmp/changed.txt
+          fi
+
+      - name: bash -n 检查本次改动的 shell 脚本
+        run: |
+          set -euo pipefail
+          files="$(grep -E '\.sh$' /tmp/changed.txt || true)"
+          for f in $files; do
+            [ -f "$f" ] || continue
+            bash -n "$f"
+            echo "OK   $f"
+          done
+          echo "✅ 本次改动里 $(echo "$files" | grep -c . || true) 个 shell 脚本语法正确"
+
+      - name: py_compile 检查本次改动的 python 文件
+        run: |
+          set -euo pipefail
+          files="$(grep -E '\.py$' /tmp/changed.txt || true)"
+          for f in $files; do
+            [ -f "$f" ] || continue
+            python3 -m py_compile "$f"
+            echo "OK   $f"
+          done
+          echo "✅ 本次改动里 $(echo "$files" | grep -c . || true) 个 python 文件语法正确"
+
+  # ── Check ③：示例清单的结构自检（常驻检查）───────────
+  demo-manifest:
+    name: 示例清单结构自检
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 检查 demo 里的 K8s 清单必填字段（只看 k8s-*.yaml）
+        run: |
+          set -euo pipefail
+          ruby -ryaml -e '
+            files = %x(ls demo/pr-check-actions/yaml-samples/k8s-*.yaml).split("\n")
+            bad = []
+            files.each do |f|
+              doc = YAML.load_file(f)
+              missing = []
+              missing << "apiVersion" unless doc.is_a?(Hash) && doc["apiVersion"]
+              missing << "kind"       unless doc.is_a?(Hash) && doc["kind"]
+              missing << "metadata.name" unless doc.is_a?(Hash) && doc.dig("metadata", "name")
+              if missing.empty?
+                puts "OK   #{f} (#{doc["kind"]}/#{doc.dig("metadata", "name")})"
+              else
+                bad << "#{f}: 缺少 #{missing.join(", ")}"
+              end
+            end
+            puts
+            if bad.empty?
+              puts "✅ #{files.size} 个清单结构正确"
+            else
+              bad.each { |b| puts "❌ #{b}" }
+              exit 1
+            end
+          '

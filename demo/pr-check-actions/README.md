@@ -99,3 +99,55 @@ ruby -ryaml -e 'YAML.load_file("demo/pr-check-actions/yaml-samples/k8s-deploymen
 PR 页面 → **Checks** 标签 → 记下 Check 名字（`gh pr checks <PR>` 也能看到）→
 Settings → Branches → Branch protection rules → 对 `main` 勾 **Require status checks to pass** →
 把三条 Check 勾上。之后 **Check 不绿就合不进去**。
+## 8. ★ 本次演示的实测结果（PR #12）
+
+```
+① 提 PR              -> Actions 自动触发，Checks 标签下出现 3 条记录（pending -> pass）
+② 故意推一个坏 YAML  -> "YAML 语法校验" 变 fail（红叉），另外两条仍然 pass
+③ 修好再推          -> 三条全部 pass
+```
+
+也就是说：**红 -> 绿**这两态你都能在 PR 页面上直接看到，不需要连 Cloud Build。
+
+### 顺便发现的一个坑：PR 显示 BLOCKED 不一定是"你的 check 红了"
+
+本仓库 `main` 的 branch protection 里，required status check 是 `validate-ip`
+（就是仓库原有的那个 workflow）。而它的触发条件是：
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - '**/api_list.yaml'      # ← 只有改了这个文件才会跑
+```
+
+所以**任何没改 api_list.yaml 的 PR，这个 required check 根本不会上报**，
+GitHub 就会一直显示 `mergeStateStatus: BLOCKED` ——
+**"check 从未上报" 和 "check 跑了但是红的"，在 PR 上长得一样。**
+
+★ 由此得到一条硬规则：
+> **要设成 required 的 check，必须保证它在"每一个 PR"上都会上报。**
+> 否则 PR 会永远卡住，而且看不出是哪一步卡住的。
+> （修法：让 workflow 无条件跑；或者别把它设成 required。）
+
+### 把这三条 Check 变成硬门禁
+
+```bash
+# 先看清楚 main 现在要求哪些 check
+gh api repos/aibangjuxin/go/branches/main/protection --jq '.required_status_checks'
+
+# 加上这三条（注意名字要和 PR 上显示的一字不差）
+gh api -X PUT repos/aibangjuxin/go/branches/main/protection \\
+  -F 'required_status_checks[strict]=true' \\
+  -F 'required_status_checks[contexts][]=validate-ip' \\
+  -F 'required_status_checks[contexts][]=YAML 语法校验' \\
+  -F 'required_status_checks[contexts][]=Shell / Python 语法校验' \\
+  -F 'required_status_checks[contexts][]=示例清单结构自检' \\
+  -F 'enforce_admins=true' \\
+  -F 'required_pull_request_reviews[required_approving_review_count]=1' \\
+  -F 'required_pull_request_reviews[dismiss_stale_reviews]=true'
+```
+
+> ⚠️ 改之前想清楚：这是 **仓库级策略**，会影响所有 PR（包括自动同步过来的那些）。
+> 建议先在别的分支上试，或者等团队确认。
+

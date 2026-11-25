@@ -6,8 +6,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT_DIR}"
 
-HELM_BIN_DIR="${HELM_BIN_DIR:-${ROOT_DIR}/.tools/bin}"
-export PATH="${HELM_BIN_DIR}:${PATH}"
+TOOLS_BIN_DIR="${TOOLS_BIN_DIR:-${ROOT_DIR}/.tools/bin}"
+export PATH="${TOOLS_BIN_DIR}:${PATH}"
 
 APPS_OUT="${ROOT_DIR}/build/foundation-apps.json"
 CLUSTER_SPEC="${ROOT_DIR}/cluster/cluster-spec.json"

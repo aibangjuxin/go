@@ -22,8 +22,9 @@ ci-simulation/
 │   ├── values.yaml
 │   └── templates/{configmap,service}.yaml
 ├── cluster/cluster-spec.json         # 集群规格（给 onboarding 测试用）
+├── .tools/<os>-<arch>/bin/          # CI 装的工具（helm 等），按平台分目录（gitignore）
 └── scripts/
-    ├── utils/install_ci_dependencies.sh        # 幂等装 helm（落到 .tools/bin）
+    ├── utils/install_ci_dependencies.sh        # 幂等装 helm（落到 .tools）
     ├── utils/test_install_ci_dependencies.sh   # 断言"依赖装好了"
     ├── utils/prepare_foundation_apps.py        # 生成 build/foundation-apps.json
     ├── utils/test_prepare_foundation_apps.py   # 上面脚本的单测
@@ -74,10 +75,11 @@ gcloud builds triggers create github \
   --no-require-approval
 ```
 
-> ★ 两个最容易踩的坑：
+> ★ 三个最容易踩的坑：
 > 1. `--comment-control` **默认是 `COMMENTS_ENABLED`**，不显式写 `COMMENTS_DISABLED` 的话，
 >    PR 开了也不会跑，必须有人敲 `/gcbrun`。
 > 2. `--build-config` 的路径是**相对仓库根目录**的，所以是 `ci-simulation/ci-test.yaml`。
+> 3. trigger 建好之后，**已经开着的 PR 不会自动补跑** —— 再 push 一个 commit（或关掉重开 PR）才会触发。
 
 ### 3.3 验证
 
@@ -90,7 +92,19 @@ gcloud builds list --region=asia-northeast1 --limit=5
 gcloud builds log <BUILD_ID> --region=asia-northeast1
 ```
 
-## 4. 怎么"故意搞红"它
+## 4. ★ 实测踩过的 4 个坑（照抄 Cloud Build 的真实行为）
+
+这四条都是在本机用 docker 按"每个 step 一个全新容器、共享 /workspace"的方式跑出来的，
+**不照做，Cloud Build 上必挂**：
+
+| # | 坑 | 现象 | 本仓库的解法 |
+| :--- | :--- | :--- | :--- |
+| 1 | **step 之间只有 /workspace 共享** | step1 用 apt-get 装的 `make`，step2 里 `make: command not found` | 工具装进 `.tools`；每个 step 的 `env` 显式把 `.tools/bin` 放进 `PATH` |
+| 2 | **builder 镜像太干净** | `ubuntu:22.04` 里 make / curl / python3 一个都没有 | 改用 `python:3.11`（full）：自带 make / curl / python3 / git / tar |
+| 3 | **curl 只在下载时需要** | 后续 step 里因为"没有 curl"直接失败 | 安装脚本改成：只有真的要下载 helm 时才检查 curl |
+| 4 | **本地与 CI 抢同一个工具目录** | 本地 mac 装的 helm 被容器当成 linux 版执行 → exec format error | 工具目录按平台分：`.tools/<os>-<arch>/bin`；CI 用 `TOOLS_BIN_DIR` 固定成 `/workspace/ci-simulation/.tools/bin` |
+
+## 5. 怎么"故意搞红"它
 
 想看 Check 变红是什么效果，任选一处：
 
@@ -103,13 +117,16 @@ gcloud builds log <BUILD_ID> --region=asia-northeast1
 
 改完 push，PR 上那条 Check 立刻变红，日志里能定位到失败在第几个 step。
 
-## 5. 接入门禁（可选）
+## 6. 接入门禁（可选）
 
 PR 页面 → **Checks** 标签 → 记下那条 check 的名字（`gh pr checks` 也能看到）→
 仓库 Settings → Branches → Branch protection rules → 对 `main` 勾 **Require status checks to pass** →
 把这条 check 勾上。此后 **Check 不绿就合不进去**。
 
-## 6. 清理
+> 本仓库 `main` 已经有 branch protection（required check = `validate-ip`、strict、1 个 review），
+> 所以 **PR 现在还合不进去** —— 这正是"门禁"的样子。
+
+## 7. 清理
 
 ```bash
 make clean        # 删掉 build/ 和 .tools/

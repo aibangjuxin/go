@@ -3,7 +3,7 @@
 # 常用命令：
 #   make help            看所有命令
 #   make test            跑全部检查（Cloud Build 里跑的就是这一套）
-#   make install-deps    安装 CI 依赖（helm 落到 .tools/bin）
+#   make install-deps    安装 CI 依赖（helm 落到 .tools/<os>-<arch>/bin）
 #   make test-helm       helm lint + helm template
 #   make test-python     python 单测（foundation apps + 集群 onboarding）
 #   make test-bash       bash 断言
@@ -11,17 +11,27 @@
 #
 # ★ 核心原则：**本地和 CI 跑的是同一条命令**（make test），
 #   所以"本地过了 CI 挂"这种事基本不会发生，差异只剩环境。
+#
+# ★ 路径要点：
+#   1. Cloud Build 的 step 之间**只有 /workspace 共享** → 工具装进 .tools
+#   2. 工具目录**按平台分目录** → 本地 mac 和 CI 的 linux 不会互相污染
+#   3. CI 里用 TOOLS_BIN_DIR 环境变量把路径固定成 /workspace/ci-simulation/.tools/bin
 
 SHELL := bash
 PYTHON ?= python3
-HELM_BIN_DIR := $(CURDIR)/.tools/bin
+
+HOST_OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+HOST_ARCH := $(shell uname -m)
+TOOLS_BIN_DIR ?= $(CURDIR)/.tools/$(HOST_OS)-$(HOST_ARCH)/bin
+export TOOLS_BIN_DIR   # 导出给子进程（scripts/*.sh 会读它）
+
 CHART_DIR ?= charts/ci-demo
 RELEASE_NAME ?= argocd-bootstrap
 
 ifeq ($(OS),Windows_NT)
-export PATH := $(HELM_BIN_DIR);$(PATH)
+export PATH := $(TOOLS_BIN_DIR);$(PATH)
 else
-export PATH := $(HELM_BIN_DIR):$(PATH)
+export PATH := $(TOOLS_BIN_DIR):$(PATH)
 endif
 
 .DEFAULT_GOAL := help
@@ -35,8 +45,10 @@ help: ## 显示所有命令
 	@echo "  make test-helm        helm lint + helm template"
 	@echo "  make test-python      python 单测"
 	@echo "  make test-bash        bash 断言"
-	@echo "  make install-deps     安装依赖（helm -> $(HELM_BIN_DIR)）"
+	@echo "  make install-deps     安装依赖（helm -> $(TOOLS_BIN_DIR)）"
 	@echo "  make clean            清理产物"
+	@echo ""
+	@echo "  工具目录: $(TOOLS_BIN_DIR)"
 
 test: test-helm test-python test-bash ## 跑全部检查
 ci: test ## CI 的别名

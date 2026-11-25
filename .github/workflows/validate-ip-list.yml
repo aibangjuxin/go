@@ -35,7 +35,7 @@ jobs:
         id: find-files
         run: |
           # 用 PR 的目标分支（base_ref），不要写死 origin/main
-          base_ref="${github.base_ref || 'main'}"
+          base_ref="${{ github.base_ref }}"
           git fetch --no-tags origin "${base_ref}"
           # 查找 PR 中修改的 api_list.yaml 文件
           modified_files=$(git diff --name-only --diff-filter=ACMR "origin/${base_ref}...HEAD" | grep 'api_list.yaml' || true)
@@ -68,7 +68,7 @@ jobs:
           echo "[]" > all_results.json
           exit_code=0
           # 对每个修改的 api_list.yaml 文件运行验证
-          for file in ${steps.find-files.outputs.files}; do
+          for file in ${{ steps.find-files.outputs.files }}; do
             echo "Validating ${file}"
             if python ip_validator.py "${file}" --json-output > "results-$(basename ${file}).json"; then
               echo "Validation succeeded for ${file}"
@@ -124,7 +124,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const comment = `${steps.parse.outputs.comment_body}`;
+            const comment = `${{ steps.parse.outputs.comment_body }}`;
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -136,7 +136,7 @@ jobs:
         if: steps.find-files.outputs.files != '' && steps.validate.outputs.exit_code != '0'
         run: |
           echo "Validation failed for one or more api_list.yaml files:"
-          echo "${steps.parse.outputs.all_suggestions}"
+          echo "${{ steps.parse.outputs.all_suggestions }}"
           exit 1
 
       - name: No action needed

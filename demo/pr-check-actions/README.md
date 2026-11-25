@@ -154,7 +154,10 @@ gh api -X PUT repos/aibangjuxin/go/branches/main/protection \\
 
 ---
 
-## 9. 门禁配置：怎么关掉 / 怎么开回来
+
+---
+
+## 9. 门禁配置：现在是什么状态 / 以后怎么开回来
 
 ### 现在的状态
 
@@ -162,18 +165,37 @@ gh api -X PUT repos/aibangjuxin/go/branches/main/protection \\
 | :--- | :--- |
 | `main` 的 classic branch protection | **已删除** → main 现在谁都能直接推，不需要 review、不需要 check |
 | Ruleset `ip_verify`（id 6214824） | `enforcement = disabled`（本来就是没生效的） |
+| `validate-ip` workflow | **改成只能手动触发**（`on: workflow_dispatch`）→ **PR 状态里不再出现这条 check** |
 | 源码 | **全部保留**：`ip_validator.py` / `ip_validator.md` / `.github/workflows/validate-ip-list.yml` / `api_list.yaml` |
 
-⚠️ 删掉的只是"**门禁**"，不是代码：
-`validate-ip` 这个 workflow 仍然会在 PR 上跑、仍然会在 PR 上评论、校验失败仍然会红，
-只是**不再拦住合并**。以后想让它重新有门禁效力，按下面一条命令开回来即可。
+### 所以现在 PR 的状态里有什么
+
+```
+YAML 语法校验            ← PR Checks workflow（PR 分支上有就自动跑）
+Shell / Python 语法校验
+示例清单结构自检
+```
+
+**只有这 3 条**。`validate-ip` 不再自动触发，所以不会出现在 PR 的 Checks 里。
+
+### 手动跑 validate-ip（想用的时候）
+
+```bash
+# 命令行
+gh workflow run validate-ip-list.yml -f base_branch=main
+
+# 或 Actions 页面 → "Validate IP List (手动触发)" → Run workflow → 选分支
+```
+
+它会对比所选分支与 `base_branch` 的差异，把改动过的 `api_list.yaml` 跑一遍校验并打印结果。
 
 ### 存档文件（就在本目录）
 
 | 文件 | 内容 |
 | :--- | :--- |
 | `branch-protection-main.json` | 删除前的原始 GET 结果（存档用） |
-| `branch-protection-main.restore.json` | **可以直接 PUT 回去**的最小 body（已实测有效） |
+| `branch-protection-main.restore.json` | **可以直接 PUT 回去**的门禁配置：required checks = 那 3 条 PR Checks + 1 个 review（已实测有效） |
+| `branch-protection-main.restore-legacy.json` | 旧配置（含 `validate-ip`）—— 只有在把 validate-ip 改回 PR 自动触发后才能用 |
 | `ruleset-ip_verify.json` | 那个 disabled 的 ruleset（以后想启用直接用它） |
 
 ### 以后想开回来（一条命令，已实测）
@@ -183,15 +205,26 @@ gh api -X PUT repos/aibangjuxin/go/branches/main/protection \
   --input demo/pr-check-actions/branch-protection-main.restore.json
 ```
 
-PUT 上去之后是：required status check = `validate-ip`、strict = true、required reviews = 1。
+PUT 上去之后：required checks = 三条 PR Checks、strict = true、required reviews = 1。
+
+> ⚠️ **注意**：这份配置要求那 3 条 PR Checks **每个 PR 都会上报**。
+> 它们跑在 `.github/workflows/pr-checks.yml` 里，而这个 workflow 只存在于
+> **包含它的分支**上 —— 所以要让它在 main 上对所有 PR 生效，
+> 得先把它合进 main（现在就在这个 PR 里）。
 
 ### 或者走 UI
 
 - **Rulesets**：Settings → Rules → Rulesets → `ip_verify` → "Set to active"
 - **Classic**：Settings → Branches → Branch protection rules → Add rule（照 `restore.json` 填）
 
-### 重新启用前先确认一件事
+### 如果以后想让 validate-ip 回到 PR 自动触发
 
-**确认 `validate-ip` 的 `paths` 过滤已经去掉**（本 PR 已经改好），
-否则会再次出现"required check 永不上报 → PR 永远 Blocked"的老问题。
+改 `.github/workflows/validate-ip-list.yml` 里的 `on:`：
 
+```yaml
+on:
+  pull_request:
+    branches: [ main ]      # ★ 绝不能加 paths 过滤
+```
+
+⚠️ 加了 `paths` 过滤 + 把它设成 required check = PR 永远 Blocked（required check 永不上报）。

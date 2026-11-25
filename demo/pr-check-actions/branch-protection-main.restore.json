@@ -2,7 +2,9 @@
   "required_status_checks": {
     "strict": true,
     "contexts": [
-      "validate-ip"
+      "YAML 语法校验",
+      "Shell / Python 语法校验",
+      "示例清单结构自检"
     ]
   },
   "enforce_admins": false,

@@ -1,0 +1,34 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "ApplicationSet",
+  "apps": [
+    {
+      "name": "argocd-core",
+      "repo": "example-infra",
+      "path": "apps/argocd-core",
+      "syncPolicy": "auto",
+      "enabled": true
+    },
+    {
+      "name": "cluster-onboarding",
+      "repo": "example-infra",
+      "path": "apps/cluster-onboarding",
+      "syncPolicy": "auto",
+      "enabled": true
+    },
+    {
+      "name": "platform-metrics",
+      "repo": "example-infra",
+      "path": "apps/platform-metrics",
+      "syncPolicy": "auto",
+      "enabled": true
+    },
+    {
+      "name": "legacy-dashboard",
+      "repo": "example-infra",
+      "path": "apps/legacy-dashboard",
+      "syncPolicy": "manual",
+      "enabled": false
+    }
+  ]
+}

@@ -36,6 +36,7 @@ jobs:
         run: |
           # 用 PR 的目标分支（base_ref），不要写死 origin/main
           base_ref="${{ github.base_ref }}"
+          [ -n "$base_ref" ] || base_ref=main      # 兜底：手动触发时 base_ref 为空
           git fetch --no-tags origin "${base_ref}"
           # 查找 PR 中修改的 api_list.yaml 文件
           modified_files=$(git diff --name-only --diff-filter=ACMR "origin/${base_ref}...HEAD" | grep 'api_list.yaml' || true)

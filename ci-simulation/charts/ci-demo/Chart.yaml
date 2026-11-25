@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ci-demo
+description: 用于演示"PR 触发 Cloud Build CI"的最小 Helm chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

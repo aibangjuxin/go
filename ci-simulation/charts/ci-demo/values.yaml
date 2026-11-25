@@ -1,0 +1,10 @@
+# 默认值：helm lint / helm template 会用到
+nameOverride: ""
+replicaCount: 1
+
+image:
+  repository: example/app
+  tag: "1.0.0"
+
+service:
+  port: 8080

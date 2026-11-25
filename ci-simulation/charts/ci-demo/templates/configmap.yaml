@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  APP_NAME: {{ .Values.image.repository | quote }}
+  REPLICA_COUNT: {{ .Values.replicaCount | quote }}

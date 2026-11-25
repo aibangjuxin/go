@@ -1,0 +1,74 @@
+# ci-test.yaml —— Cloud Build build config（PR CI 用）
+#
+# trigger 指向它：
+#   --build-config=ci-simulation/ci-test.yaml
+#
+# 四个 step ↔ Makefile 里的四个 target：
+#   install-deps        ↔ make install-deps
+#   helm-lint-render    ↔ make test-helm
+#   cluster-onboarding  ↔ make test-python
+#   bootstrap-tests     ↔ make test-bash
+#
+# ★ 四条必须记住的规则（都是容器实测踩出来的）：
+#   1. step 之间**只有 /workspace 共享** → helm 装到 ci-simulation/.tools/bin
+#   2. 每个 step 都是**全新容器** → 每个 step 的 env 都要显式把 .tools/bin 放进 PATH
+#   3. builder 镜像用 python:3.11（full）：自带 make / curl / python3 / git
+#      —— ubuntu:22.04 这几样一个都没有，跑之前还得 apt-get 装
+#   4. TOOLS_BIN_DIR 固定成 /workspace/ci-simulation/.tools/bin：
+#      容器里路径固定，本地按平台分目录，两边互不污染
+steps:
+  # ── 0) 安装测试依赖 ───────────────────────────────
+  - name: 'python:3.11'
+    id: 'install-deps'
+    dir: 'ci-simulation'
+    entrypoint: bash
+    args:
+      - 'scripts/utils/install_ci_dependencies.sh'
+    env:
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/.tools/bin'
+      - 'PATH=/workspace/ci-simulation/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    timeout: '600s'
+
+  # ── 1) Helm lint + render ─────────────────────────
+  - name: 'python:3.11'
+    id: 'helm-lint-render'
+    dir: 'ci-simulation'
+    entrypoint: bash
+    args: ['-c', 'make test-helm']
+    env:
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/.tools/bin'
+      - 'PATH=/workspace/ci-simulation/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+  # ── 2) 集群 onboarding 测试 ───────────────────────
+  - name: 'python:3.11'
+    id: 'cluster-onboarding'
+    dir: 'ci-simulation'
+    entrypoint: bash
+    args: ['-c', 'make test-python']
+    env:
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/.tools/bin'
+      - 'PATH=/workspace/ci-simulation/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    waitFor: ['install-deps']
+    timeout: '900s'
+
+  # ── 3) bootstrap 脚本测试 ─────────────────────────
+  - name: 'python:3.11'
+    id: 'bootstrap-tests'
+    dir: 'ci-simulation'
+    entrypoint: bash
+    args: ['-c', 'make test-bash']
+    env:
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/.tools/bin'
+      - 'PATH=/workspace/ci-simulation/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+# ── 全局 ─────────────────────────────────────────────
+timeout: '1800s'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: '30'
+  logging: 'CLOUD_LOGGING_ONLY'

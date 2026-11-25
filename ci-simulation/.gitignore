@@ -1,0 +1,7 @@
+# CI 装到仓库内的工具目录
+.tools/
+# CI / 本地跑出来的产物
+build/
+# python 字节码
+__pycache__/
+*.pyc

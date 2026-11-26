@@ -133,6 +133,46 @@ sequenceDiagram
     GHES-->>Parent: 
     Parent-->>Dev: View report + cloud-build/ci
 ```
+---
+```txt
+Developer        GHES              CB Trigger        Parent build        Child build
+   |                |                   |                 |                  |
+   |- Open/update PR|                   |                 |                  |
+   |--------------->|                   |                 |                  |
+   |                |- POST pull_request|                 |                  |
+   |                |------------------>|                 |                  |
+   |                |                   |- Filter + bindings                |
+   |                |                   |- Create parent                    |
+   |                |                   |---------------------------------->|
+   |                |                   |                 |- validate-input  |
+   |                |                   |                 |- prepare-credentials
+   |                |<- GET PR: verify open/head (BOT token) ---------------|
+   |                |------------------>|                 |                  |
+   |                |<- POST statuses/{sha}: pending -----|                  |
+   |                |------------------>|                 |                  |
+   |                |<- GET ci-tests.yaml at head SHA ----|                  |
+   |                |------------------>|                 |                  |
+   |                |- Return test declarations --------->|                  |
+   |                |                   |                 |- run-tests: generate
+   |                |                   |                 |- Create child via API
+   |                |                   |                 |----------------->|
+   |                |                   |                 |                  |- prepare NETRC
+   |                |                   |                 |                  |- clone + checkout SHA
+   |                |                   |                 |                  |- 1. Install dependencies
+   |                |                   |                 |                  |- 2. Helm lint/render
+   |                |                   |                 |                  |- 3. Python unit tests
+   |                |                   |                 |                  |- 4. Bash mock tests
+   |                |                   |                 |- Poll child Build API
+   |                |                   |                 |----------------->|
+   |                |                   |                 |<- Status + step results
+   |                |                   |                 |- report-result: aggregate + Markdown
+   |                |<- POST issues/{PR}/comments (BOT token) --------------|
+   |                |------------------>|                 |                  |
+   |                |<- POST statuses/{sha}: success/failure ---------------|
+   |                |------------------>|                 |                  |
+   |<- View report + cloud-build/ci ---|                 |                  |
+```
+
 
 ★ 注意 ⑦ 这一段：**从 webhook 服务到 GitHub 的这一次写回，才需要 bot 的权限**。
 前面 ①~⑥ 全是 GCP 侧和 GitHub 侧 webhook 之间的内部链路。

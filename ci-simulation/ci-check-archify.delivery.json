@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "f605c51e-eed8-4d27-bf25-9660e165ebbc",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/lex/git/go/ci-simulation/.archify/sequence-ci-check-20261126-153359/candidate.json",
+  "output": "/Users/lex/git/go/ci-simulation/ci-check-archify.html",
+  "specification": {
+    "sha256": "fef2354d847fe00c95b9ea8a772afc6cc86df27efb7914db4380480591475d6c",
+    "bytes": 5917
+  },
+  "artifact": {
+    "sha256": "e06fe2d695d5b98f87c046d8e94fb277eadda770f5b71bded2796099d42594d6",
+    "bytes": 936997
+  }
+}

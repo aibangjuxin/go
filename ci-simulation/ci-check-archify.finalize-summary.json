@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "sequence",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/lex/git/go/ci-simulation/.archify/sequence-ci-check-20261126-153359/candidate.json",
+    "sha256": "3d22b357df0583b4c9ce33fb86939c3e22504c0ee462bee2292ef0f007f85a1f",
+    "bytes": 5888
+  },
+  "artifact": {
+    "path": "/Users/lex/git/go/ci-simulation/ci-check-archify.html",
+    "sha256": "19a9f15010a4719ea92213a606727967514b0785acb5c683c5d1f46c6ccc8b60",
+    "bytes": 940308
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/lex/git/go/ci-simulation/ci-check-archify.finalize.json",
+    "summaryReceipt": "/Users/lex/git/go/ci-simulation/ci-check-archify.finalize-summary.json",
+    "browserCheckReceipt": "/Users/lex/git/go/ci-simulation/ci-check-archify.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.3.2",
+    "availableVersion": "3.3.1",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-26T07:34:05.419Z",
+    "source": "network",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3424,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

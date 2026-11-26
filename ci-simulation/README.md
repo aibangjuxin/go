@@ -6,6 +6,13 @@ PR 页面出现一条 **Check** → 设成 required 之后，红了就合不进�
 配套讲解文档（在另一个仓库）：
 [how-to-pr-checks-with-cloud-build.md](https://github.com/aibangjuxin/knowledge/blob/main/gcp/gcp-cloud-build/how-to-pr-checks-with-cloud-build.md)
 
+本目录相关的基础概念文档：
+- [pull-report-bot-flow.md](pull-report-bot-flow.md) —— 企业内部 pull-report-bot 全链路：PR → webhook → Cloud Build → report
+- [cloud-build-trigger-guide.md](cloud-build-trigger-guide.md) —— Cloud Build Trigger 深入：它到底能做什么
+- [trigger/README.md](trigger/README.md) —— 可落地模板：PR 校验 + 自动回填 report（含脚本）
+- [github-bot-principles.md](github-bot-principles.md) —— Bot / GitHub App 到底是什么、怎么加、背后原理
+- [openshift-ci-prow-enterprise.md](openshift-ci-prow-enterprise.md) —— GitHub App 剖解 + GHES 上的 PR 门禁
+
 ---
 
 ## 1. 目录结构
@@ -131,3 +138,11 @@ PR 页面 → **Checks** 标签 → 记下那条 check 的名字（`gh pr checks
 ```bash
 make clean        # 删掉 build/ 和 .tools/
 ```
+
+## 8. 配套文档（本地）
+
+| 文档 | 讲什么 |
+| :--- | :--- |
+| [ci-simulation-enterprise.md](ci-simulation-enterprise.md) | 企业版（GHES）整体路线图：Actions 在 GHES 上的现实、路线 A 自研 App vs 路线 B 外部 CI |
+| [ci-simulation-enterprise-cloud-build.md](ci-simulation-enterprise-cloud-build.md) | GHE × Cloud Build：把「PR → Check → 硬门禁」真正打通的工作分解（W1–W9） |
+| [openshift-ci-prow-enterprise.md](openshift-ci-prow-enterprise.md) | OpenShift CI 的 GitHub App 剖解（源码可见性、为什么装了没反应）+ 自建 Prow 在 GHES 上的落地（★ 补上「GHES 没有 Actions」这个缺口） |

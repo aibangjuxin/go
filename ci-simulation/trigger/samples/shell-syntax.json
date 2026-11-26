@@ -1,0 +1,10 @@
+{
+  "name": "Shell 语法校验",
+  "status": "failed",
+  "exit_code": 2,
+  "duration_s": 0.3,
+  "summary": "1/2 个 shell 文件语法错误",
+  "details": "FAIL scripts/ops/deploy.sh\n     scripts/ops/deploy.sh: line 18: syntax error near unexpected token 'fi'",
+  "files": 2,
+  "order": 2
+}

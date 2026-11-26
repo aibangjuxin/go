@@ -1,0 +1,152 @@
+# cloudbuild.yaml —— PR 校验 + 自动生成 report 的 build config
+#
+# 这个文件既能被 trigger 用（gcloud builds triggers create github --build-config=...），
+# 也能本地手动跑（gcloud builds submit --config ...）。
+#
+# ★ 设计核心：**校验失败不中断构建**
+#   每个校验 step 都用 scripts/ci_step.sh 包一层，它永远 exit 0；
+#   这样即使 YAML 语法错了，build 也会继续跑到最后的 report step，
+#   把"哪一项失败、错在哪"渲染成 markdown 回填到 PR。
+#   最后由 report step 统一决定 build 该不该红（exit 1）。
+#
+# ★ 目录约定
+#   dir: 是相对 /workspace 的路径。本仓库里 trigger 模板放在 ci-simulation/trigger，
+#   抄到你自己的仓库时改成 '.' 或你的目录名即可（同时改 RESULT_DIR / TOOLS_BIN_DIR / PYTHONPATH）。
+steps:
+  # ── 0) 装依赖（helm / pyyaml）──────────────────────────────
+  - name: 'python:3.11'
+    id: 'install-deps'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args: ['scripts/install_deps.sh']
+    env:
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHON_DEPS_DIR=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    timeout: '600s'
+
+  # ── 1) YAML 语法校验 ───────────────────────────────────────
+  - name: 'python:3.11'
+    id: 'yaml-syntax'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args: ['scripts/ci_step.sh', 'YAML 语法校验', 'bash', 'scripts/checks/yaml_syntax.sh']
+    env:
+      - 'CI_STEP_ORDER=1'
+      - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      - 'BASE_BRANCH=$_BASE_BRANCH'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+  # ── 2) Shell 语法校验 ──────────────────────────────────────
+  - name: 'python:3.11'
+    id: 'shell-syntax'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args: ['scripts/ci_step.sh', 'Shell 语法校验', 'bash', 'scripts/checks/shell_syntax.sh']
+    env:
+      - 'CI_STEP_ORDER=2'
+      - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      - 'BASE_BRANCH=$_BASE_BRANCH'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+  # ── 3) Helm lint ───────────────────────────────────────────
+  - name: 'python:3.11'
+    id: 'helm-lint'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args: ['scripts/ci_step.sh', 'Helm lint', 'bash', 'scripts/checks/helm_lint.sh']
+    env:
+      - 'CI_STEP_ORDER=3'
+      - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      - 'BASE_BRANCH=$_BASE_BRANCH'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+  # ── 4) Helm 渲染 ───────────────────────────────────────────
+  - name: 'python:3.11'
+    id: 'helm-template'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args: ['scripts/ci_step.sh', 'Helm 渲染', 'bash', 'scripts/checks/helm_template.sh']
+    env:
+      - 'CI_STEP_ORDER=4'
+      - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      - 'BASE_BRANCH=$_BASE_BRANCH'
+    waitFor: ['install-deps']
+    timeout: '600s'
+
+  # ── 5) 汇总 → 渲染 report → 回填 PR → 决定 build 红绿 ──────
+  - name: 'python:3.11'
+    id: 'report'
+    dir: 'ci-simulation/trigger'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        set -uo pipefail
+        echo "===== 各 step 结果 ====="
+        python3 scripts/ci_result.py list
+        echo "===== 渲染 report ====="
+        python3 scripts/render_report.py --out artifacts/report.md
+        cat artifacts/report.md
+        echo "===== 回填 PR ====="
+        python3 scripts/post_report.py --body artifacts/report.md || echo "[report] 回填失败（不阻塞构建）"
+        echo "===== 判定 build 红绿 ====="
+        python3 scripts/ci_result.py check
+    env:
+      - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+      - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+      - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+      - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      - 'PR_NUMBER=$_PR_NUMBER'
+      - 'REPO=$REPO_FULL_NAME'
+      - 'BASE_BRANCH=$_BASE_BRANCH'
+      - 'HEAD_BRANCH=$_HEAD_BRANCH'
+    waitFor: ['yaml-syntax', 'shell-syntax', 'helm-lint', 'helm-template']
+    timeout: '300s'
+
+# ── 全局 ──────────────────────────────────────────────────────
+timeout: '1800s'
+
+options:
+  machineType: 'E2_HIGHCPU_8'
+  diskSizeGb: '30'
+  logging: 'CLOUD_LOGGING_ONLY'
+  # 把内置 substitution 全部带成环境变量（$BUILD_ID / $PROJECT_ID / $_PR_NUMBER …）
+  automapSubstitutions: true
+  env:
+    - 'RESULT_DIR=/workspace/ci-simulation/trigger/artifacts/results'
+    - 'TOOLS_BIN_DIR=/workspace/ci-simulation/trigger/.tools/bin'
+    - 'PYTHONPATH=/workspace/ci-simulation/trigger/.tools/py'
+    - 'PATH=/workspace/ci-simulation/trigger/.tools/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+    - 'BASE_BRANCH=$_BASE_BRANCH'
+    - 'HEAD_BRANCH=$_HEAD_BRANCH'
+    - 'PR_NUMBER=$_PR_NUMBER'
+    - 'REPO=$REPO_FULL_NAME'
+
+# 回填 PR 用的 token（Secret Manager）。建法见 README。
+availableSecrets:
+  secretEnv:
+    - 'GITHUB_TOKEN=projects/PROJECT_ID/secrets/github-pr-report-token/versions/latest'
+
+# report 落一份到 GCS，便于追溯与对比
+artifacts:
+  objects:
+    location: 'gs://YOUR_BUCKET/pr-reports/'
+    paths:
+      - 'ci-simulation/trigger/artifacts/report.md'
+      - 'ci-simulation/trigger/artifacts/results/**'

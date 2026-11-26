@@ -1,0 +1,10 @@
+{
+  "name": "Helm lint",
+  "status": "skipped",
+  "exit_code": 77,
+  "duration_s": 0.1,
+  "summary": "本次没有 Helm chart 改动",
+  "details": "",
+  "files": null,
+  "order": 3
+}

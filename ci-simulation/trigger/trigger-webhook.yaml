@@ -1,0 +1,35 @@
+# trigger-webhook.yaml —— Webhook trigger（企业里"自己那套 webhook 中转"的落点）
+#
+# 用法：
+#   gcloud builds triggers create webhook \
+#     --trigger-config=ci-simulation/trigger/trigger-webhook.yaml \
+#     --region=us-central1
+#
+# 适合场景：
+#   * 事件不是标准 GitHub 事件（比如内部流水线、Gerrit、GitLab webhook）
+#   * 想自己在中间层做鉴权、限流、参数改写
+#
+# ★ Webhook trigger 的 secret 是"校验用的 secret"：
+#   Secret Manager 里放一个 secret 版本，调用 webhook URL 时必须带上匹配的校验值，
+#   否则 Cloud Build 会拒绝这个请求（这是防"谁都能触发你的构建"的唯一手段）。
+name: pr-validate-webhook
+description: 外部 webhook 触发 PR 校验 + 回填 report
+
+serviceAccount: projects/PROJECT_ID/serviceAccounts/cloudbuild-pr@PROJECT_ID.iam.gserviceaccount.com
+
+webhookConfig:
+  secret: projects/PROJECT_ID/secrets/pr-webhook-secret/versions/latest
+
+# 从哪个仓库取代码（webhook 事件本身不带代码）
+gitFileSource:
+  path: ci-simulation/trigger/cloudbuild.yaml
+  repository: projects/PROJECT_ID/locations/us-central1/connections/CONNECTION_NAME/repositories/REPO_NAME
+
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+
+substitutions:
+  _REPORT_BOT_NAME: pull-report-bot
+
+tags:
+  - team=platform
+disabled: false

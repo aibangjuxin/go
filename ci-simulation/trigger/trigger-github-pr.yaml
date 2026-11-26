@@ -1,0 +1,56 @@
+# trigger-github-pr.yaml —— 2nd gen GitHub App trigger（PR 事件 → Cloud Build）
+#
+# 用法：
+#   gcloud builds triggers create github \
+#     --trigger-config=ci-simulation/trigger/trigger-github-pr.yaml \
+#     --region=us-central1
+#
+# 前置条件：
+#   1. GCP 侧已创建 GitHub 连接（Developer Connect）：
+#      gcloud developer-connect connections create --connection-connection-id=CONN \
+#        --github-repository-config=... --region=REGION
+#   2. GitHub 侧已把 Cloud Build 的 GitHub App 装到目标仓库
+#   3. 拿到 installationId（GitHub App 安装页面上的数字）
+#   4. 服务账号已存在，且有 cloudbuild.builds.create / logs 等权限
+name: pr-validate-with-report
+description: PR 校验（YAML/Shell/Helm）+ 自动把 report 回填到 PR
+
+# 只有 trigger 上指定的 SA 会被用于触发构建；build config 里写的 serviceAccount 在 trigger 场景下会被忽略
+serviceAccount: projects/PROJECT_ID/serviceAccounts/cloudbuild-pr@PROJECT_ID.iam.gserviceaccount.com
+
+github:
+  owner: YOUR_ORG
+  name: YOUR_REPO
+  installationId: "REPLACE_WITH_INSTALLATION_ID"
+  pullRequest:
+    branch: "^main$"          # 只对目标分支是 main 的 PR 触发（RE2 正则）
+    # commentControl: NONE    # 不需要 /gcbrun 就能跑（控制台里对应 "Not required"）
+    #   其它取值语义见下方说明
+
+# build config 放在仓库里的哪个路径（2nd gen 用 gitFileSource，不是 1st gen 的 filename）
+gitFileSource:
+  path: ci-simulation/trigger/cloudbuild.yaml
+  repository: projects/PROJECT_ID/locations/us-central1/connections/CONNECTION_NAME/repositories/REPO_NAME
+
+# ★ 把构建日志链接送到 GitHub：build 结束后，PR 的 check 上会出现 "View logs" 链接
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+
+# trigger 级自定义变量（下划线开头），可以在 build config 里当 $_XXX 用
+substitutions:
+  _REPORT_BOT_NAME: pull-report-bot
+
+tags:
+  - team=platform
+  - purpose=pr-ci
+
+disabled: false
+
+# ─────────────────────────────────────────────────────────────
+# commentControl 的三种档位（控制台里叫 Comment control）：
+#   COMMENTS_ENABLED  → 必须有人评论 /gcbrun 才跑（最省资源，适合公共仓库防乱跑）
+#   COMMENTS_DISABLED → 不需要 /gcbrun；但有 write 权限的人评论 /gcbrun 仍会手动触发一次
+#   NONE              → 完全不启用评论控制（普通内部仓库用这个）
+#
+# ★ 公开仓库注意：任何有 read 权限的人提 PR 都能触发一次构建，
+#   所以公开仓库建议配合 approvalConfig（人工审批）而不是直接跑。
+# ─────────────────────────────────────────────────────────────

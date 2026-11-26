@@ -1,0 +1,10 @@
+{
+  "name": "YAML 语法校验",
+  "status": "passed",
+  "exit_code": 0,
+  "duration_s": 0.6,
+  "summary": "3 个 YAML 文件语法通过",
+  "details": "",
+  "files": 3,
+  "order": 1
+}

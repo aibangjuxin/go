@@ -1,0 +1,10 @@
+{
+  "name": "Helm 渲染",
+  "status": "passed",
+  "exit_code": 0,
+  "duration_s": 2.4,
+  "summary": "1 个 chart 渲染成功",
+  "details": "",
+  "files": 1,
+  "order": 4
+}

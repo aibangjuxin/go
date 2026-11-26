@@ -187,6 +187,7 @@ c := gogithub.NewClient(&http.Client{Transport: tr})
   - `X-Hub-Signature-256: sha256=<hmac>`
 - **必须校验签名**：用 secret 对**原始 body** 做 HMAC-SHA256，比对 header；不一致直接丢弃。
   （这就是 `cr-check/internal/webhook/handler.go` 在做的事。）
+> ★ 想知道 GitHub 仓库里那条 webhook 到 Cloud Build 的**完整投递原理**（10 秒超时、重投、payload 上限、Cloud Build webhook trigger 的 secret 机制），看 [`github-webhook-deep-dive.md`](github-webhook-deep-dive.md)。
 - `pull_request` 事件 payload 里带 `installation.id` → 你的服务据此换 token 操作那个仓库。
 
 ### 4.5 为什么 bot 的评论能出现在 PR 上

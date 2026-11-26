@@ -1,0 +1,405 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "pull-report-bot: PR to Report Sequence",
+    "output": "ci-flow.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    {
+      "id": "dev",
+      "type": "external",
+      "label": "Developer",
+      "sublabel": "opens the PR"
+    },
+    {
+      "id": "ghes",
+      "type": "backend",
+      "label": "GHES",
+      "sublabel": "GitHub Enterprise"
+    },
+    {
+      "id": "trigger",
+      "type": "cloud",
+      "label": "CB Trigger",
+      "sublabel": "2nd-gen trigger"
+    },
+    {
+      "id": "parent",
+      "type": "cloud",
+      "label": "Parent Build",
+      "sublabel": "orchestrator"
+    },
+    {
+      "id": "psteps",
+      "type": "backend",
+      "label": "Parent Steps",
+      "sublabel": "step containers"
+    },
+    {
+      "id": "child",
+      "type": "cloud",
+      "label": "Child Build",
+      "sublabel": "test runner"
+    },
+    {
+      "id": "csteps",
+      "type": "backend",
+      "label": "Child Steps",
+      "sublabel": "step containers"
+    }
+  ],
+  "segments": [
+    {
+      "from": 182,
+      "to": 260,
+      "label": "Trigger"
+    },
+    {
+      "from": 262,
+      "to": 722,
+      "label": "Prepare"
+    },
+    {
+      "from": 742,
+      "to": 1100,
+      "label": "Tests"
+    },
+    {
+      "from": 1102,
+      "to": 1382,
+      "label": "Report"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m01-open-pr",
+      "from": "dev",
+      "to": "ghes",
+      "y": 160,
+      "label": "Open / update PR",
+      "variant": "default"
+    },
+    {
+      "id": "m02-webhook",
+      "from": "ghes",
+      "to": "trigger",
+      "y": 200,
+      "label": "POST pull_request",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m03-create-parent",
+      "from": "trigger",
+      "to": "parent",
+      "y": 240,
+      "label": "Create parent build",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m04-validate-input",
+      "from": "parent",
+      "to": "psteps",
+      "y": 280,
+      "label": "validate-input",
+      "variant": "default"
+    },
+    {
+      "id": "m05-inputs-ok",
+      "from": "psteps",
+      "to": "parent",
+      "y": 320,
+      "label": "inputs accepted",
+      "variant": "return"
+    },
+    {
+      "id": "m06-credentials",
+      "from": "parent",
+      "to": "psteps",
+      "y": 360,
+      "label": "prepare-credentials",
+      "variant": "default"
+    },
+    {
+      "id": "m07-credentials-ready",
+      "from": "psteps",
+      "to": "parent",
+      "y": 400,
+      "label": "token + NETRC ready",
+      "variant": "return"
+    },
+    {
+      "id": "m08-verify-pr",
+      "from": "parent",
+      "to": "ghes",
+      "y": 440,
+      "label": "GET PR: verify open/head",
+      "variant": "security"
+    },
+    {
+      "id": "m09-pr-state",
+      "from": "ghes",
+      "to": "parent",
+      "y": 480,
+      "label": "PR state + head SHA",
+      "variant": "return"
+    },
+    {
+      "id": "m10-pending",
+      "from": "parent",
+      "to": "ghes",
+      "y": 520,
+      "label": "POST status: pending",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m11-status-accepted",
+      "from": "ghes",
+      "to": "parent",
+      "y": 560,
+      "label": "status accepted",
+      "variant": "return"
+    },
+    {
+      "id": "m12-get-ci-tests",
+      "from": "parent",
+      "to": "ghes",
+      "y": 600,
+      "label": "GET ci-tests.yaml at head",
+      "variant": "default"
+    },
+    {
+      "id": "m13-test-decls",
+      "from": "ghes",
+      "to": "parent",
+      "y": 640,
+      "label": "test declarations",
+      "variant": "return"
+    },
+    {
+      "id": "m14-generate",
+      "from": "parent",
+      "to": "psteps",
+      "y": 680,
+      "label": "run-tests: generate",
+      "variant": "default"
+    },
+    {
+      "id": "m15-child-spec",
+      "from": "psteps",
+      "to": "parent",
+      "y": 720,
+      "label": "child build spec",
+      "variant": "return"
+    },
+    {
+      "id": "m16-create-child",
+      "from": "parent",
+      "to": "child",
+      "y": 760,
+      "label": "Create child build via API",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m17-netrc-checkout",
+      "from": "child",
+      "to": "csteps",
+      "y": 800,
+      "label": "prepare NETRC + checkout",
+      "variant": "default"
+    },
+    {
+      "id": "m18-install-deps",
+      "from": "child",
+      "to": "csteps",
+      "y": 840,
+      "label": "1. Install dependencies",
+      "variant": "default"
+    },
+    {
+      "id": "m19-helm",
+      "from": "child",
+      "to": "csteps",
+      "y": 880,
+      "label": "2. Helm lint + render",
+      "variant": "default"
+    },
+    {
+      "id": "m20-python",
+      "from": "child",
+      "to": "csteps",
+      "y": 920,
+      "label": "3. Python unit tests",
+      "variant": "default"
+    },
+    {
+      "id": "m21-bash",
+      "from": "child",
+      "to": "csteps",
+      "y": 960,
+      "label": "4. Bash mock tests",
+      "variant": "default"
+    },
+    {
+      "id": "m22-step-results",
+      "from": "csteps",
+      "to": "child",
+      "y": 1000,
+      "label": "exit codes + logs",
+      "variant": "return"
+    },
+    {
+      "id": "m23-poll",
+      "from": "parent",
+      "to": "child",
+      "y": 1040,
+      "label": "Poll child Build API",
+      "variant": "dashed"
+    },
+    {
+      "id": "m24-child-status",
+      "from": "child",
+      "to": "parent",
+      "y": 1080,
+      "label": "status + step results",
+      "variant": "return"
+    },
+    {
+      "id": "m25-report-result",
+      "from": "parent",
+      "to": "psteps",
+      "y": 1120,
+      "label": "report-result: aggregate",
+      "variant": "default"
+    },
+    {
+      "id": "m26-markdown",
+      "from": "psteps",
+      "to": "parent",
+      "y": 1160,
+      "label": "markdown report",
+      "variant": "return"
+    },
+    {
+      "id": "m27-comment",
+      "from": "parent",
+      "to": "ghes",
+      "y": 1200,
+      "label": "POST PR comment (BOT token)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m28-comment-ok",
+      "from": "ghes",
+      "to": "parent",
+      "y": 1240,
+      "label": "comment posted",
+      "variant": "return"
+    },
+    {
+      "id": "m29-final-status",
+      "from": "parent",
+      "to": "ghes",
+      "y": 1280,
+      "label": "POST status: success/failure",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m30-status-updated",
+      "from": "ghes",
+      "to": "parent",
+      "y": 1320,
+      "label": "status updated",
+      "variant": "return"
+    },
+    {
+      "id": "m31-view-report",
+      "from": "parent",
+      "to": "dev",
+      "y": 1360,
+      "label": "View report + cloud-build/ci",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "trigger",
+      "from": 200,
+      "to": 240,
+      "type": "cloud"
+    },
+    {
+      "participant": "ghes",
+      "from": 200,
+      "to": 1340,
+      "type": "backend"
+    },
+    {
+      "participant": "parent",
+      "from": 280,
+      "to": 1340,
+      "type": "cloud"
+    },
+    {
+      "participant": "psteps",
+      "from": 280,
+      "to": 1160,
+      "type": "backend"
+    },
+    {
+      "participant": "child",
+      "from": 760,
+      "to": 1080,
+      "type": "cloud"
+    },
+    {
+      "participant": "csteps",
+      "from": 800,
+      "to": 1000,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Trigger and scheduling",
+      "items": [
+        "pull_request event reaches the Cloud Build 2nd-gen trigger",
+        "Trigger filters the event (opened / synchronize only) and binds PR number, head SHA and repo into the build",
+        "The parent build is created from that binding"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Parent build orchestrates",
+      "items": [
+        "validate-input and prepare-credentials run before any GitHub call",
+        "Every GHES call uses the pull-report-bot token (issues:write, statuses:write)",
+        "A pending commit status is posted before the tests start",
+        "ci-tests.yaml at the head SHA decides which tests to run",
+        "run-tests: generate produces the child build spec, the parent polls the Cloud Build API"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Child build runs the tests",
+      "items": [
+        "Four steps: install dependencies, helm lint + render, python unit tests, bash mock tests",
+        "Each step is a fresh container, only /workspace is shared between steps",
+        "Results return as step exit codes and logs"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Report and gate",
+      "items": [
+        "report-result aggregates step results into a Markdown report",
+        "pull-report-bot posts the report as a PR comment",
+        "The commit status carries the pass/fail signal used by branch protection",
+        "A hidden marker keeps one comment updated instead of spamming the PR"
+      ]
+    }
+  ]
+}

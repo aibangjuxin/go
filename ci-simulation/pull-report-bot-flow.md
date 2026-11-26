@@ -94,9 +94,51 @@
     │ ⑧ 看到 report │                     │                    │                   │
     │◀─────────────┤                     │                    │                   │
 ```
+- 
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GHES as GHES
+    participant CB as CB Trigger
+    participant Parent as Parent build
+    participant Child as Child build
+
+    Dev->>GHES: Open/update PR
+    GHES->>CB: POST pull_request
+    CB->>CB: Filter + bindings
+    CB->>CB: Create parent
+    CB->>Parent: Create parent
+    Parent->>Parent: validate-input
+    Parent->>Parent: prepare-credentials
+    Parent->>GHES: GET PR: verify open/head (BOT token)
+    GHES-->>Parent: 
+    Parent->>GHES: POST statuses/{sha}: pending
+    GHES-->>Parent: 
+    Parent->>GHES: GET ci-tests.yaml at head SHA
+    GHES-->>Parent: Return test declarations
+    Parent->>Parent: run-tests: generate
+    Parent->>Child: Create child via API
+    Child->>Child: prepare NETRC
+    Child->>Child: clone + checkout SHA
+    Child->>Child: 1. Install dependencies
+    Child->>Child: 2. Helm lint/render
+    Child->>Child: 3. Python unit tests
+    Child->>Child: 4. Bash mock tests
+    Parent->>Child: Poll child Build API
+    Child-->>Parent: Status + step results
+    Parent->>Parent: report-result: aggregate + Markdown
+    Parent->>GHES: POST issues/{PR}/comments (BOT token)
+    GHES-->>Parent: 
+    Parent->>GHES: POST statuses/{sha}: success/failure
+    GHES-->>Parent: 
+    Parent-->>Dev: View report + cloud-build/ci
+```
 
 ★ 注意 ⑦ 这一段：**从 webhook 服务到 GitHub 的这一次写回，才需要 bot 的权限**。
 前面 ①~⑥ 全是 GCP 侧和 GitHub 侧 webhook 之间的内部链路。
+
+> ★ 想看这条链路**拆成 parent build / child build** 的版本（以及什么场景才值得拆），
+> 见 [cloud-build-parent-child-builds.md](cloud-build-parent-child-builds.md)。
 
 ---
 
@@ -303,7 +345,7 @@ fi
 | 拉 build 结果 | `cloudbuild.builds.get` / logs | GCP IAM |
 | 贴 report 评论 | `issues: write`（或 `pull_requests: write`） | collaborator role=write / App permission |
 | 上报 check | `checks: write` 或 `statuses: write` | 同上 |
-| 读代码 | `contents: read` | 同上 |
+| 读代码 | `contents: read` | 同上（★ trigger 触发的构建 **clone 私有仓库是自动的**，clone 本身不需要凭据） |
 | 门禁生效 | required status check | Settings → Branches / Rulesets |
 
 ---

@@ -174,6 +174,11 @@ gcloud secrets add-iam-policy-binding github-pr-report-token \
 ```
 
 token 需要 `issues: write`（贴/改 PR 评论）权限。
+
+★ **这个 token 只用于"回写 GitHub"**，不用于 clone：
+官方明确（`Accessing GitHub from a build`）——
+`You need to use Secret Manager to connect to private GitHub repositories only when running manual builds. When you run builds using Cloud Build triggers, you can automatically connect to any private repository you own without storing your credentials in Secret Manager.`
+→ trigger 触发的构建 clone 私有仓库是自动的；**只有贴 report / 上报 check 才需要这个 token**。
 如果你们用的是 GitHub App，就用 installation token（1h 过期，需要续期逻辑，见
 [`../github-bot-principles.md`](../github-bot-principles.md)）。
 

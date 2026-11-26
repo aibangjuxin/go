@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "adf9c3d4-e9a3-4a56-ac81-7d47c7ee2fef",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/lex/git/go/ci-simulation/.archify/sequence-ci-flow-20261126-145151/candidate.json",
+  "output": "/Users/lex/git/go/ci-simulation/ci-flow.html",
+  "specification": {
+    "sha256": "4e9dafc2c89e7e252c16fbd22cd0c4a94836f49b2d183d3c7e0cac114cc9e048",
+    "bytes": 8944
+  },
+  "artifact": {
+    "sha256": "5d4a168ddb3b26e7fabaa6115bdecb8378846926463867f8b2989db45a454768",
+    "bytes": 777064
+  }
+}

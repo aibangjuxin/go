@@ -9,6 +9,8 @@ PR 页面出现一条 **Check** → 设成 required 之后，红了就合不进�
 本目录相关的基础概念文档：
 - [pull-report-bot-flow.md](pull-report-bot-flow.md) —— 企业内部 pull-report-bot 全链路：PR → webhook → Cloud Build → report
 - [cloud-build-trigger-guide.md](cloud-build-trigger-guide.md) —— Cloud Build Trigger 深入：它到底能做什么
+- [github-webhook-deep-dive.md](github-webhook-deep-dive.md) —— GitHub Webhook 深入：投递原理 + 你们仓库 hooks → Cloud Build 的真实链路
+- [cloud-build-parent-child-builds.md](cloud-build-parent-child-builds.md) —— Parent / Child Build：是什么、怎么用、你们的场景要不要拆
 - [trigger/README.md](trigger/README.md) —— 可落地模板：PR 校验 + 自动回填 report（含脚本）
 - [github-bot-principles.md](github-bot-principles.md) —— Bot / GitHub App 到底是什么、怎么加、背后原理
 - [openshift-ci-prow-enterprise.md](openshift-ci-prow-enterprise.md) —— GitHub App 剖解 + GHES 上的 PR 门禁

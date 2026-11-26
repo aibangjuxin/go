@@ -114,6 +114,7 @@
 | 10 | **运行位置** | `--region` / build 的 `options.pool` | 私有池（无公网）时 region 必须和池一致 |
 | 11 | **产物与日志去向** | build 的 `artifacts` / `logsBucket` / `options.logging` | report.md 也能落一份到 GCS |
 | 12 | **元数据与开关** | `tags` / `disabled` / `description` | tags 方便按团队统计；`disabled: true` 临时停用而不删 |
+| 13 | **被别的 build 调用（扇出）** | `projects.triggers.run` | 一个 trigger 可以在 build 内部被 run 起来 → 产生 **child build**（详见 [cloud-build-parent-child-builds.md](cloud-build-parent-child-builds.md)） |
 
 配套的日常运维命令：
 ```
@@ -206,6 +207,7 @@ trigger 触发的 build 里，这些变量**自动存在**（不需要自己定�
 | `webhookConfig` | {secret, state} | Webhook 触发器（secret 用于校验请求） |
 | `pubsubConfig` | {topic, serviceAccountEmail} | Pub/Sub 触发器 |
 | `sourceToBuild` | {repoName, branchName, tagName, commitSha, dir} | 非 SCM 触发器指定代码来源 |
+| `RepoSource`（run 时用） | {branchName, tagName, commitSha, dir, **substitutions**} | `projects.triggers.run` 的 request body；官方描述：substitutions `Should only be used with RunBuildTrigger` |
 | `triggerTemplate` | {branchName, tagName, commitSha, pullRequest, push} | 1st gen 的触发条件 |
 
 **GitHub 事件配置（GitHubEventsConfig）**
@@ -238,6 +240,15 @@ trigger 触发的 build 里，这些变量**自动存在**（不需要自己定�
 9. **日志默认只进 Cloud Logging** → 要长期留档就配 `logsBucket` 或 `options.logging`。
 10. **`gcloud builds submit` 手动跑时，内置变量要自己给**：
     `$TRIGGER_NAME` / `$COMMIT_SHA` / `$REPO_NAME` 等可以 `--substitutions` 手动指定。
+11. ★ **构建是浅克隆（shallow clone）**：官方明确 —— "`To build your source on a Git repository, Cloud Build performs a shallow clone of the repository`，
+    `only the single commit that started the build is checked out in the workspace`，
+    `Cloud Build does not check out any other branches or history`。
+    → **凡是用 `git diff origin/main...HEAD` 做增量检查的，都要能退化**（拿不到 base 就退化成全量），
+    否则会"静默跳过所有检查"。
+12. **提交信息里带 `[skip ci]` 或 `[ci skip]` → 不触发构建**：
+    之后想在这个 commit 上跑，要在 Triggers 页面点 **Run** 按钮。
+    ★ 注意：被 skip 的那次 PR **不会有 report**（构建根本没起）。
+13. **仓库改名后要手动更新 trigger**：官方说明 —— "`If you rename your repository following trigger creation, then you need to manually update the repository name in your trigger. Cloud Build doesn't redirect build requests from your trigger if a repository name is updated.`
 
 ---
 
@@ -266,6 +277,8 @@ trigger 触发的 build 里，这些变量**自动存在**（不需要自己定�
   `https://cloud.google.com/build/docs/automating-builds/create-github-app-triggers`
 - 官方指南（substitution）：
   `https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values`
+- 官方指南（创建与管理 trigger，含浅克隆 / skip ci / 改名）：
+  `https://cloud.google.com/build/docs/running-builds/create-manage-triggers`
 - 本仓库：[`trigger/`](trigger/README.md)（可落地模板）·
   [`pull-report-bot-flow.md`](pull-report-bot-flow.md)（场景全链路）·
   [`github-bot-principles.md`](github-bot-principles.md)（Bot / App 原理）
